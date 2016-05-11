@@ -63,12 +63,25 @@ double DiscreteHmm::_logSumExp(const vector<double>& vec, double b)
 {
 	double sum = 0;
 
+	//handle the zero prob exceptions
+	if(b == -numeric_limits<double>::infinity()){
+		//largest probability is zero (-inf in ln space), so return zero and avert exceptions from exp() function
+		return -numeric_limits<double>::infinity();
+	}
+
+
 	//sum the log-probs in linear space, shifted by b (where b is actually some negative number)
 	for(int i = 0; i < vec.size(); i++){
-		sum += exp(vec[i] - b); //since b is a negative number, this will be addition.
+		//only sum if the current val is not negative infinity; if it is, just skip it, since -inf is zero in linear space
+		if(vec[i] != -numeric_limits<double>::infinity()){
+			sum += exp(vec[i] - b); //since b is a negative number, this will be addition.
+		}
 	}
 
 	//TODO: numerical error checking, output errno if some signal value is returned
+	if(sum == 0){
+		cout << "ERROR sum == " << sum << " in _logSumExp() function" << endl;
+	}
 
 	return b + log(sum);
 }
@@ -224,12 +237,78 @@ void DiscreteHmm::BaumWelch(const vector<int>& observations)
 
 
 /*
+Normal initialization training: read a bunch of data containing both labelled emissions
+and labelled hidden/latent states, and build the A and B matrices (as they're called in Rabiner's tutorial)
 
+TODO: State and Transition matrices could be very large and sparse for some datasets; this could be resolved
+by implementing a Matrix class capable of handling such sparseness.
 */
 void DiscreteHmm::Train(DiscreteHmmDataset& dataset)
 {
+	int i, j, nrows, ncols;
+	double norm;
 
+	//TODO: numerical storage could be wrapped in compiler/machine specific ifdefs, but I don't want to for now
+	//For every machine/compiler that's worth more than two cents, this should evaluate to true.
+	if(!numeric_limits<double>::has_infinity || !std::numeric_limits<double>::is_iec559){ //IEEE 754
+		cout << "ERROR double does not have infinity, recompile with some other signal value for zero probabilities in log space" << endl;
+		cout << "Consider updating your computer from steam to electric power." << endl;
+	}
 
+	//init the A matrix
+	_stateMatrix.Resize(dataset.NumStates(), dataset.NumStates());
+	_stateMatrix.Reset();
+	//init the B matrix (|rows| == |states|, |cols| == |symbols|)
+	_transitionMatrix.Resize(dataset.NumStates(), dataset.NumSymbols());
+	_transitionMatrix.Reset();
+
+	//count all the frequencies
+	for(i = 1; i < dataset.TrainingSequence.size(); i++){
+		_stateMatrix[ dataset[i-1].first ][dataset[i].first]++;
+		_transitionMatrix[ dataset[i-1].second ][ dataset[i].second ]++;
+	}
+
+	//normalize all state frequencies (making them probabilities in ln space)
+	_stateMatrix.GetSize(nrows,ncols);
+	for(i = 0; i < nrows; i++){
+		for(j = 0, norm = 0; j < ncols; j++){
+			norm += _stateMatrix[i][j];
+		}
+		if(norm <= 0){
+			cout << "ERROR norm < 0 (" << norm << ") in Train(), dying by div zero" << endl;
+		}
+		for(j = 0; j < ncols; j++){
+			if(_stateMatrix[i][j] > 0){
+				//This property helps avoid underflowing the (x/y) param to log function: log(x/y) = log(x) - log(y)
+				_stateMatrix[i][j] = log(_stateMatrix[i][j]) - log(norm);
+			}
+			else{
+				//Let negative-infinity signal zero probability in log-space
+				_stateMatrix[i][j] = -numeric_limits<double>::infinity();
+			}
+		}
+	}
+
+	//normalize all emission frequencies (making them probabilities in ln space)
+	_transitionMatrix.GetSize(nrows,ncols);
+	for(i = 0; i < nrows; i++){
+		for(j = 0, norm = 0; j < ncols; j++){
+			norm += _transitionMatrix[i][j];
+		}
+		if(norm <= 0){
+			cout << "ERROR norm < 0 (" << norm << ") in Train(), dying by div zero" << endl;
+		}
+		for(j = 0; j < ncols; j++){
+			if(_transitionMatrix[i][j] > 0){
+				//This property helps avoid underflowing the (x/y) param to log function: log(x/y) = log(x) - log(y)
+				_transitionMatrix[i][j] = log(_transitionMatrix[i][j]) - log(norm);
+			}
+			else{
+				//Let negative-infinity signal zero probability in log-space
+				_transitionMatrix[i][j] = -numeric_limits<double>::infinity();
+			}
+		}
+	}
 
 
 }

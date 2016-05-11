@@ -48,13 +48,11 @@ const string& DiscreteHmmDataset::GetState(int key)
 DiscreteHmmDataset::DiscreteHmmDataset(const string& path)
 {
 	Build(path);
-
-
 }
 
 DiscreteHmmDataset::Clear()
 {
-	_trainingSequence.clear();
+	TrainingSequence.clear();
 	_stateFlyweight.clear();
 	_symbolFlyweight.clear();
 }

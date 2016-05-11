@@ -38,18 +38,16 @@ void DiscreteHmmDataset::Build(const string& path);
 	}
 }
 
-const string& DiscreteHmmDataset::GetEmission()
+const string& DiscreteHmmDataset::GetEmission(int key)
 {}
 
-const string& DiscreteHmmDataset::GetState()
+const string& DiscreteHmmDataset::GetState(int key)
 {}
 
 
 DiscreteHmmDataset::DiscreteHmmDataset(const string& path)
 {
 	Build(path);
-
-
 }
 
 DiscreteHmmDataset::Clear()
