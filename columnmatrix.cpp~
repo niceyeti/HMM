@@ -63,7 +63,7 @@ Resizes the matrix' internal storage per the parameters. Note that
 this function is cumulative: If matrix is presently larger than needed,
 this will not shrink the internal matrix size, only its representation.
 */
-void ColumnMatrix::Resize(int rows, int cols)
+void ColumnMatrix::Resize(const int rows, const int cols)
 {
 	if(_matrix.size() < cols){
 		_matrix.resize(cols);

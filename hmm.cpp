@@ -1,20 +1,5 @@
+#include "hmm.hpp"
 
-
-/*
-Implements
-As much as possible, I tried to make this mirror Rabin's hmm tutorial.
-
-*/
-float DiscreteHmm::GetLogProbability(const vector<int>& observation)
-{
-	int i, t;
-
-	//resize the alpha matrix as needed
-	_alphaMatrix.resize(observation.size(), this->N);
-
-	//run the forward algorithm over entire length of observation
-	ForwardAlgorithm(observation, observation.length());
-}
 
 /*
 Implements backward algorithm from Rabiner.
@@ -31,20 +16,20 @@ double DiscreteHmm::BackwardAlgorithm(const vector<int>& observation, const int 
 	}
 
 	//Resize and reset matrix to all zeroes
-	_betaMatrix.Resize(this->NumStates(), observation.size());
-	_betaMatrix.Reset();
+	_betaLattice.Resize(this->NumStates(), observation.size());
+	_betaLattice.Reset();
 	temp.resize(this->NumStates());
 
 	//init last column of beta matrix to 1.0 (which is 0.0, in logarithm land)
-	vector<double>& lastCol = *_betaMatrix.end();
+	vector<double>& lastCol = *_betaLattice.end();
 	for(i = 0 ; i < lastCol.size(); i++){
 		lastCol[i] = 0;
 	}
 
 	//Induction
 	for(i = observation.length() - 2; i >= 0; i--){
-		vector<double>& leftCol = _betaMatrix[i];
-		vector<double>& rightCol = _betaMatrix[i+1];
+		vector<double>& leftCol = _betaLattice[i];
+		vector<double>& rightCol = _betaLattice[i+1];
 		//foreach state in left state column
 		for(j = 0; j < leftCol.size(); j++){
 			b = -10000000; //some very large negative number
@@ -62,7 +47,7 @@ double DiscreteHmm::BackwardAlgorithm(const vector<int>& observation, const int 
 	}
 
 	//Termination
-	vector<double>& firstCol = _betaMatrix.front();
+	vector<double>& firstCol = _betaLattice.front();
 	for(i = 0, sum = 0; i < firstCol.size(); i++){
 		sum += firstCol[i]; 
 	}
@@ -95,7 +80,7 @@ Implements forward algorithm from Rabiner.
 @t: the number of observations for which to run the forward algorithm from left to right;
 on exit, the t-th column (columns counted from 0) will contain inductively defined values of forward alg.
 
-Returns the sum of calculated values in the t-th column. On exit, _alphaMatrix will retain all forward probability
+Returns the sum of calculated values in the t-th column. On exit, _alphaLattice will retain all forward probability
 values for this observation as well.
 */
 double DiscreteHmm::ForwardAlgorithm(const vector<int>& observations, const int t)
@@ -110,19 +95,19 @@ double DiscreteHmm::ForwardAlgorithm(const vector<int>& observations, const int 
 	}
 
 	//Resize and reset matrix to all zeroes
-	_alphaMatrix.Resize(this->NumStates(), observation.size());
-	_alphaMatrix.Reset();
+	_alphaLattice.Resize(this->NumStates(), observation.size());
+	_alphaLattice.Reset();
 	temp.resize(this->NumStates());
 
 	//init left-most column of alpha matrix to initial probs, given first observation
 	for(i = 0 ; i < this->NumStates(); i++){
-		_alphaMatrix[0][i] = _pi[i] + _transitionMatrix[i][observations[0]];
+		_alphaLattice[0][i] = _pi[i] + _transitionMatrix[i][observations[0]];
 	}
 
 	//Induction, from 1 to t
 	for(i = 1; i <= t; i++){
-		vector<double>& leftCol = _alphaMatrix[i-1];
-		vector<double>& rightCol = _alphaMatrix[i];
+		vector<double>& leftCol = _alphaLattice[i-1];
+		vector<double>& rightCol = _alphaLattice[i];
 		//foreach state in right column
 		for(j = 0; j < rightCol.size(); j++){
 			b = -10000000; //some very large negative number
@@ -141,7 +126,7 @@ double DiscreteHmm::ForwardAlgorithm(const vector<int>& observations, const int 
 	}
 
 	//Termination
-	vector<double>& lastCol = _alphaMatrix.back();
+	vector<double>& lastCol = _alphaLattice.back();
 	for(i = 0, sum = 0; i < lastCol.size(); i++){
 		sum += lastCol[i];
 	}
@@ -150,19 +135,99 @@ double DiscreteHmm::ForwardAlgorithm(const vector<int>& observations, const int 
 }
 
 
-void DiscreteHmm::Viterbi()
+/*
+The Viterbi algorithm is nearly identical to the forward algorithm except for using a max() operation
+instead of a sum() operation in the inductive step.
+
+@t: The number of states to evaluate. In almost every case, the user would want to evalaute t = |observations|
+to get the complete sequence of most likely hidden states corresponding to the observation sequence.
+
+Returns: Probability of the most likely sequence of hidden states corresponding with the observation
+sequence. On exit, @output will contain the id's of these hidden states, and the viterbiLattice will contain
+all of the calculated viterbi values (Rabiner uses 'delta' for these).
+*/
+double DiscreteHmm::Viterbi(const vector<int>& observations, const int t, vector<int>& output)
+{
+	int i, j, k;
+	vector<double> temp;
+	double sum;
+	pair<int,double> max;
+
+	if(t < 0 || t > observations.size()){
+		cout << "ERROR t parameter invalid in Viterbi(): " << t << endl;
+		return 1.0;
+	}
+
+	//Resize and reset matrix to all zeroes
+	_viterbiLattice.Resize(this->NumStates(), observation.size());
+	_viterbiLattice.Reset();
+	output.resize(observations.size());
+	//init the backpointer matrix
+	_ptrLattice.Resize(this->NumStates(), observation.size());
+
+	//init left-most column of alpha matrix to initial probs, given first observation
+	for(i = 0 ; i < this->NumStates(); i++){
+		_viterbiLattice[0][i] = _pi[i] + _transitionMatrix[i][observations[0]];
+		_ptrLattice[0][i] = -1; //point all initial pointers at <start> null state
+	}
+
+	//Induction, from 1 to t
+	for(i = 1; i <= t; i++){
+		vector<double>& leftCol = _viterbiLattice[i-1];
+		vector<double>& rightCol = _viterbiLattice[i];
+		vector<int>& ptrCol = _ptrLattice[i];
+		//foreach state in right column
+		for(j = 0; j < rightCol.size(); j++){
+			max = -10000000; //some large negative number
+			//iterate the previous states, given the current state
+			for(k = 0; k < leftCol.size(); k++){
+				temp = (_stateMatrix[k][j] + leftCol[k]);
+				if(temp > max.second){
+					max.second = temp;
+					max.first = k;
+				}
+			} //end-for: max contains maximum score and a pointer to its argmax state 
+			ptrCol[j]  = max.first;
+			leftCol[j] = max.second;
+			//lastly, multiply the observation probability back in, which was factored out of forward calculations
+			leftCol[j] += _transitionMatrix[j][ observations[i] ];
+		}
+	}
+
+	//Termination
+	//get max in last column
+	vector<double>& lastCol = _viterbiLattice[t];
+	vector<int>& ptrCol = _ptrLattice[t];
+	max.second = -1000000;
+	for(i = 0; i < lastCol.size(); i++){
+		if(max.second < lastCol[i]){
+			max.second = lastCol[i];
+			max.first = ptrCol[i];
+		}
+	}
+	//backtrack to get optimal state id sequence
+	output.back() = max.first;
+	for(i = t - 1; i >= 0; i--){
+		output[i] = _ptrLattice[i][ output[i+1] ];
+	}
+
+	return max.second;
+}
+
+/*
+
+*/
+void DiscreteHmm::BaumWelch(const vector<int>& observations)
 {
 
 }
+
 
 /*
 
 */
 void DiscreteHmm::Train(DiscreteHmmDataset& dataset)
 {
-	
-
-
 
 
 
