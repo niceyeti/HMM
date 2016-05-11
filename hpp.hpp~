@@ -1,0 +1,83 @@
+#ifndef HMM_HPP
+#define HMM_HPP
+
+#include <map>
+#include <string>
+#include <iostream>
+#include <fstream>
+
+using namespace std;
+
+/*
+Simple mapping class for mapping strings to ints, and ints to strings.
+This is useful since it allows strings (words, parts of speech, etc.) to 
+be stored as simple ints for algorithmic purposes, then translated back as
+needed.
+*/
+class Flyweight<T>{
+	public:
+		~Flyweight();
+		Flyweight();		
+		int AddItem(const T& item);
+		void Clear();
+		int IntToItem(int itemNum);
+		T ItemToInt(const T& item);
+	private:
+		map<T,int> _forwardTable();
+		vector<T> _reverseTable();
+};
+
+/*
+Primitive data object class for consuming files containing training sequences
+formatted as follows:
+	<hidden state>\t<discrete emission>
+
+So a hmm with part-of-speech latent variables and word emission values
+would look as follows:
+	NN\tcat
+
+Where each line is a single example of state+emission_symbol, and the file
+is expected to contain lines of such examples.
+*/
+class DiscreteHmmDataset{
+	public:
+		DiscreteHmmDataset(const string& path);
+		DiscreteHmmDataset() = delete;		
+		~DiscreteHmmDataset();
+		void Build(const string& path);
+		void Clear();
+
+		
+
+		int NumStates();
+		int NumSymbols();
+
+	private:
+		Flyweight<string> _stateFlyweight;
+		Flyweight<string> _symbolFlyweight;
+};
+
+/*
+A simple, discrete hidden markov model implementation.
+*/
+class DiscreteHmm{
+	public: 
+		DiscreteHmm(const string& path);
+		~DiscreteHmm();
+		
+		void Train(DiscreteHmmDataset& dataset);
+		
+
+
+};
+
+
+
+
+
+
+
+
+
+
+#endif
