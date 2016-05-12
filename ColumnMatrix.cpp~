@@ -1,10 +1,8 @@
 #include "Matrix.hpp"
 
-template<typename T>
 ColumnMatrix<T>::ColumnMatrix()
 {}
 
-template<typename T>
 ColumnMatrix<T>::~ColumnMatrix()
 {
 	Clear();
@@ -12,19 +10,15 @@ ColumnMatrix<T>::~ColumnMatrix()
 
 //Note these operators are highly unconventional, returning a column of a matrix before the row,
 //as in the notation [col][row].
-template<typename T>
 vector<T>& ColumnMatrix<T>::operator[](const int i)
 {
 	return _matrix[i];
 }
-
-template<typename T>
 const vector<T>& ColumnMatrix<T>::operator[](const int i) const
 {
 	return _matrix[i];
 }
 
-template<typename T>
 void ColumnMatrix<T>::GetSize(int& rows, int& cols)
 {
 	cols = _matrix.size();
@@ -36,7 +30,6 @@ void ColumnMatrix<T>::GetSize(int& rows, int& cols)
 	}
 }
 
-template<typename T>
 void ColumnMatrix<T>::Clear()
 {
 	if(_matrix.size() > 0){
@@ -47,20 +40,17 @@ void ColumnMatrix<T>::Clear()
 	}
 }
 
-template<typename T>
 vector<T>& ColumnMatrix<T>::GetColumn(const int i)
 {
 	return _matrix[i];
 }
 
-template<typename T>
 const vector<T>& ColumnMatrix<T>::GetColumn(const int i) const
 {
 	return _matrix[i];
 }
 
 //Resets all matrix vals to zero; does not resize.
-template<typename T>
 void ColumnMatrix<T>::Reset()
 {
 	for(int i = 0; i < _matrix.size(); i++){
@@ -68,8 +58,7 @@ void ColumnMatrix<T>::Reset()
 	}
 }
 
-template<typename T>
-void ColumnMatrix<T>::Print()
+void Matrix<T>::Print()
 {
 	cout << setprecision(3);
 	for(int row = 0; row < _matrix[0].size(); row++){
@@ -80,13 +69,11 @@ void ColumnMatrix<T>::Print()
 	}
 }
 
-template<typename T>
 int ColumnMatrix<T>::NumCols()
 {
 	return _matrix.size();
 }
 
-template<typename T>
 int ColumnMatrix<T>::NumRows()
 {
 	if(_matrix.size() == 0)
@@ -99,7 +86,6 @@ Resizes the matrix' internal storage per the parameters. Note that
 this function is cumulative: If matrix is presently larger than needed,
 this will not shrink the internal matrix size, only its representation.
 */
-template<typename T>
 void ColumnMatrix<T>::Resize(const int rows, const int cols)
 {
 	if(_matrix.size() < cols){

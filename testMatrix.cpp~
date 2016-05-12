@@ -1,0 +1,18 @@
+#include "Matrix.hpp"
+
+//using namespace std;
+
+template class Matrix<double>;
+
+int main(void)
+{
+	Matrix<double> doubles;
+	//ColumnMatrix<string> strings();
+
+	doubles.Print();
+
+	cout << "Hello world" << endl;
+
+	return 0;
+}
+

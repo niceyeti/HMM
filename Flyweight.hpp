@@ -4,13 +4,15 @@
 #include <map>
 #include <vector>
 
+using namespace std;
+
 /*
 Simple mapping class for mapping strings to ints, and ints to strings.
 This is useful since it allows strings (words, parts of speech, etc.) to 
 be stored as simple ints for algorithmic purposes, then translated back as
 needed.
 */
-class Flyweight<T>{
+template<typename T> class Flyweight{
 	public:
 		~Flyweight();
 		Flyweight();		

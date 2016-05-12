@@ -15,7 +15,7 @@ Consumes a pre-made model contained in a .hmm file, formatted as:
 */
 DiscreteHmm::DiscreteHmm(const string& modelPath)
 {
-	ParseModelFile();
+	ParseModelFile(modelPath);
 }
 
 DiscreteHmm::~DiscreteHmm()
@@ -28,7 +28,7 @@ bool DiscreteHmm::ParseModelFile(const string& modelPath)
 	int i, j;
 	bool result = true;
 	string line;
-	string token,param,argstr;
+	string token, param, argstr;
 	fstream modelFile;
 	vector<string> args;
 	vector<string> row;
@@ -54,7 +54,7 @@ bool DiscreteHmm::ParseModelFile(const string& modelPath)
 			}
 			else if(param == "Z="){
 				//get the state labels
-				args = _split(argstr,',')
+				args = _split(argstr,',');
 				for(i = 0; i < args.size(); i++){
 					_dataset.AddState(args[i]);
 				}
@@ -62,8 +62,8 @@ bool DiscreteHmm::ParseModelFile(const string& modelPath)
 			else if(param == "A="){
 				//get the A matrix values
 				args = _split(argstr,';');
-				for(i = 0; i < args.length(); i++){
-					row = _split(args,',');
+				for(i = 0; i < args.size(); i++){
+					row = _split(args[i],',');
 					_stateMatrix.Resize(args.size(),row.size());
 					_stateMatrix.Reset();
 					for(j = 0; j < row.size(); j++){
@@ -75,20 +75,20 @@ bool DiscreteHmm::ParseModelFile(const string& modelPath)
 			else if(param == "B="){
 				//get the B matrix values
 				args = _split(argstr,';');
-				for(i = 0; i < args.length(); i++){
-					row = _split(args,',');
+				for(i = 0; i < args.size(); i++){
+					row = _split(args[i],',');
 					_transitionMatrix.Resize(args.size(),row.size());
 					_transitionMatrix.Reset();
 					for(j = 0; j < row.size(); j++){
 						double b = stod(row[i]);
-						_transitionMatrix[i][j] = a;
+						_transitionMatrix[i][j] = b;
 					}
 				}
 			}
 			else if(param == "Pi="){
 				//get the Pi values
 				args = _split(argstr,',');
-				for(i = 0; i < args.length(); i++){
+				for(i = 0; i < args.size(); i++){
 					double pi = stod(args[i]);
 					_pi.push_back(pi);
 				}
@@ -107,13 +107,13 @@ bool DiscreteHmm::_validate()
 	bool result = true;
 
 	//some basic validation
-	if(_pi.size() != _stateMatrix.NumRows() || _pi.size() != _stateMatrix.NumCols){
-		cout << "ERROR |pi| != |states| " << _pi.size() << " != " << _stateMatrix.NumCols << endl;
+	if(_pi.size() != _stateMatrix.NumRows() || _pi.size() != _stateMatrix.NumCols()){
+		cout << "ERROR |pi| != |states| " << _pi.size() << " != " << _stateMatrix.NumCols() << endl;
 		result = false;
 	}
 	//verify pi size compared with rows of transition matrix
 	if(_pi.size() != _transitionMatrix.NumRows()){
-		cout << "ERROR |pi| != |transition rows| " << _pi.size() << " != " << _stateMatrix.NumCols << endl;
+		cout << "ERROR |pi| != |transition rows| " << _pi.size() << " != " << _stateMatrix.NumCols() << endl;
 		result = false;
 	}
 	//make sure state matrix is square
@@ -143,7 +143,7 @@ vector<string> DiscreteHmm::_split(const string& str, const char delim)
 		}
 	}
 
-	for(int prev = 0, i = 0; i < indices.length(); i++){
+	for(int prev = 0, i = 0; i < indices.size(); i++){
 		vec.push_back( str.substr(prev,i-prev-1));
 		prev = i + 1;
 	}
@@ -171,44 +171,47 @@ void DiscreteHmm::PrintModels()
 	cout << "HMM Models\n" << endl;
 
 	cout << "State transition matrix for states: ";
-	for(int i = 0; i < _dataset.NumState(); i++){
+	for(int i = 0; i < _dataset.NumStates(); i++){
 		cout << _dataset.GetState(i) << ",";
 	}
+	_stateMatrix.Print();
 	cout << "\n" <<  endl;
 
 	cout << "Emission matrix for symbols: ";
 	for(int i = 0; i < _dataset.NumSymbols(); i++){
-		cout << _dataset.GetSymbol()
+		cout << _dataset.GetSymbol(i) << ",";
 	}
+	_transitionMatrix.Print();
+	cout << "\n" <<  endl;
 }
 
 /*
 Implements backward algorithm from Rabiner.
 */
-double DiscreteHmm::BackwardAlgorithm(const vector<int>& observation, const int t)
+double DiscreteHmm::BackwardAlgorithm(const vector<int>& observations, const int t)
 {
 	int i, j, k;
 	vector<double> temp;
-	double sum;
+	double sum, b;
 
-	if(t < 0 || t >= observation.length()){
+	if(t < 0 || t >= observations.size()){
 		cout << "ERROR invalid t value in BackwardAlgorithm()" << t << endl;
 		return 1;
 	}
 
 	//Resize and reset matrix to all zeroes
-	_betaLattice.Resize(this->NumStates(), observation.size());
+	_betaLattice.Resize(_dataset.NumStates(), observations.size());
 	_betaLattice.Reset();
-	temp.resize(this->NumStates());
+	temp.resize(_dataset.NumStates());
 
 	//init last column of beta matrix to 1.0 (which is 0.0, in logarithm land)
-	vector<double>& lastCol = *_betaLattice.end();
+	vector<double>& lastCol = _betaLattice.GetColumn(_betaLattice.NumCols()-1);
 	for(i = 0 ; i < lastCol.size(); i++){
 		lastCol[i] = 0;
 	}
 
 	//Induction
-	for(i = observation.length() - 2; i >= 0; i--){
+	for(i = observations.size() - 2; i >= 0; i--){
 		vector<double>& leftCol = _betaLattice[i];
 		vector<double>& rightCol = _betaLattice[i+1];
 		//foreach state in left state column
@@ -228,7 +231,7 @@ double DiscreteHmm::BackwardAlgorithm(const vector<int>& observation, const int 
 	}
 
 	//Termination
-	vector<double>& firstCol = _betaLattice.front();
+	vector<double>& firstCol = _betaLattice.GetColumn(0);
 	for(i = 0, sum = 0; i < firstCol.size(); i++){
 		sum += firstCol[i]; 
 	}
@@ -280,20 +283,20 @@ double DiscreteHmm::ForwardAlgorithm(const vector<int>& observations, const int 
 {
 	int i, j, k;
 	vector<double> temp;
-	double sum;
+	double sum, b;
 
-	if(t < 1 || t >= observation.length()){
+	if(t < 1 || t >= observations.size()){
 		cout << "ERROR insufficient t value in ForwardAlgorithm() t=" << t << endl;
 		return 1;
 	}
 
 	//Resize and reset matrix to all zeroes
-	_alphaLattice.Resize(this->NumStates(), observation.size());
+	_alphaLattice.Resize(_dataset.NumStates(), observations.size());
 	_alphaLattice.Reset();
-	temp.resize(this->NumStates());
+	temp.resize(_dataset.NumStates());
 
 	//init left-most column of alpha matrix to initial probs, given first observation
-	for(i = 0 ; i < this->NumStates(); i++){
+	for(i = 0 ; i < _dataset.NumStates(); i++){
 		_alphaLattice[0][i] = _pi[i] + _transitionMatrix[i][observations[0]];
 	}
 
@@ -319,7 +322,7 @@ double DiscreteHmm::ForwardAlgorithm(const vector<int>& observations, const int 
 	}
 
 	//Termination
-	vector<double>& lastCol = _alphaLattice.back();
+	vector<double>& lastCol = _alphaLattice.GetColumn( _alphaLattice.NumCols()-1 );
 	for(i = 0, sum = 0; i < lastCol.size(); i++){
 		sum += lastCol[i];
 	}
@@ -341,8 +344,7 @@ all of the calculated viterbi values (Rabiner uses 'delta' for these).
 double DiscreteHmm::Viterbi(const vector<int>& observations, const int t, vector<int>& output)
 {
 	int i, j, k;
-	vector<double> temp;
-	double sum;
+	double temp;
 	pair<int,double> max;
 
 	if(t < 0 || t > observations.size()){
@@ -351,14 +353,14 @@ double DiscreteHmm::Viterbi(const vector<int>& observations, const int t, vector
 	}
 
 	//Resize and reset matrix to all zeroes
-	_viterbiLattice.Resize(this->NumStates(), observation.size());
+	_viterbiLattice.Resize(_dataset.NumStates(), observations.size());
 	_viterbiLattice.Reset();
 	output.resize(observations.size());
 	//init the backpointer matrix
-	_ptrLattice.Resize(this->NumStates(), observation.size());
+	_ptrLattice.Resize(_dataset.NumStates(), observations.size());
 
 	//init left-most column of alpha matrix to initial probs, given first observation
-	for(i = 0 ; i < this->NumStates(); i++){
+	for(i = 0 ; i < _dataset.NumStates(); i++){
 		_viterbiLattice[0][i] = _pi[i] + _transitionMatrix[i][observations[0]];
 		_ptrLattice[0][i] = -1; //point all initial pointers at <start> null state
 	}
@@ -370,7 +372,7 @@ double DiscreteHmm::Viterbi(const vector<int>& observations, const int t, vector
 		vector<int>& ptrCol = _ptrLattice[i];
 		//foreach state in right column
 		for(j = 0; j < rightCol.size(); j++){
-			max = -10000000; //some large negative number
+			max.second = -10000000; //some large negative number
 			//iterate the previous states, given the current state
 			for(k = 0; k < leftCol.size(); k++){
 				temp = (_stateMatrix[k][j] + leftCol[k]);
@@ -444,8 +446,8 @@ void DiscreteHmm::Train(DiscreteHmmDataset& dataset)
 
 	//count all the frequencies
 	for(i = 1; i < dataset.TrainingSequence.size(); i++){
-		_stateMatrix[ dataset[i-1].first ][dataset[i].first]++;
-		_transitionMatrix[ dataset[i-1].second ][ dataset[i].second ]++;
+		_stateMatrix[ dataset.TrainingSequence[i-1].first ][dataset.TrainingSequence[i].first]++;
+		_transitionMatrix[ dataset.TrainingSequence[i].first ][ dataset.TrainingSequence[i].second ]++;
 	}
 
 	//normalize all state frequencies (making them probabilities in ln space)

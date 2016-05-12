@@ -4,6 +4,8 @@
 #include "Flyweight.hpp"
 #include <string>
 
+using namespace std;
+
 /*
 Primitive data object class for consuming files containing training sequences
 formatted as follows, tab delimited:
@@ -20,8 +22,8 @@ TODO: Template the Dataset class (for string, char, etc) for the class labels.
 */
 class DiscreteHmmDataset{
 	public:
-		DiscreteHmmDataset(const string& modelPath);
-		DiscreteHmmDataset() = delete;
+		DiscreteHmmDataset();
+		DiscreteHmmDataset(const string& dataPath);
 		~DiscreteHmmDataset();
 		void Build(const string& path);
 		void Clear();

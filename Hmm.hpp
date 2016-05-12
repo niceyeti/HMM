@@ -41,19 +41,21 @@ class DiscreteHmm{
 		void BaumWelch(const vector<int>& observations);
 		double Viterbi(const vector<int>& observations, const int t, vector<int>& output);
 		double ForwardAlgorithm(const vector<int>& observations, const int t);
-		double BackwardAlgorithm(const vector<int>& observation, const int t);
+		double BackwardAlgorithm(const vector<int>& observations, const int t);
 		bool ParseModelFile(const string& modelPath);
-		void ClearModel();
+		void Clear();
+		void PrintModels();
 	private:
 		DiscreteHmmDataset _dataset;
-		ColumnMatrix _alphaLattice;
-		ColumnMatrix _betaLattice;
-		ColumnMatrix _viterbiLattice;
-		ColumnMatrix _ptrLattice;
+		ColumnMatrix<double> _alphaLattice;
+		ColumnMatrix<double> _betaLattice;
+		ColumnMatrix<double> _viterbiLattice;
+		ColumnMatrix<int> _ptrLattice;
 		vector<double> _pi;
-		Matrix _stateMatrix;
-		Matrix _transitionMatrix;
+		Matrix<double> _stateMatrix;
+		Matrix<double> _transitionMatrix;
 
+		vector<string> _split(const string& str, const char delim);
 		double _logSumExp(const vector<double>& vec, double b);
 		bool _validate();
 
