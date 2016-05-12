@@ -60,7 +60,7 @@ class DiscreteHmm{
 		Matrix<double> _stateMatrix;
 		Matrix<double> _transitionMatrix;
 
-		vector<string> _split(const string& str, const char delim);
+		void _split(const string& str, const char delim, vector<string>& tokens);
 		double _logSumExp(const vector<double>& vec, double b);
 		bool _validate();
 };
