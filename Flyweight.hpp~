@@ -1,7 +1,6 @@
 #include <map>
 #include <vector>
 
-
 /*
 Simple mapping class for mapping strings to ints, and ints to strings.
 This is useful since it allows strings (words, parts of speech, etc.) to 

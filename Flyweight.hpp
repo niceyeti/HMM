@@ -1,3 +1,6 @@
+#ifndef FLYWEIGHT_HPP
+#define FLYWEIGHT_HPP
+
 #include <map>
 #include <vector>
 
@@ -21,3 +24,4 @@ class Flyweight<T>{
 		int _numKeys;
 };
 
+#endif

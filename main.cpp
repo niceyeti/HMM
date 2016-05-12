@@ -1,4 +1,4 @@
-#include "hmm.hpp"
+#include "Hmm.hpp"
 
 
 int main(int argc, char** argv)

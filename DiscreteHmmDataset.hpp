@@ -1,4 +1,7 @@
-#include "flyweight.hpp"
+#ifndef DISCRETE_HMM_DATASET
+#define DISCRETE_HMM_DATASET
+
+#include "Flyweight.hpp"
 #include <string>
 
 /*
@@ -34,3 +37,4 @@ class DiscreteHmmDataset{
 		Flyweight<string> _symbolFlyweight;
 };
 
+#endif
