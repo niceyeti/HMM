@@ -4,6 +4,7 @@
 #include <vector>
 #include <iostream>
 #include <iomanip>
+#include <math>
 
 /*
 A lite Matrix class. This obeys normal matrix index conventions, indexing by [row][col].
@@ -19,6 +20,7 @@ class Matrix<T>{
 		void GetSize(int& rows, int& cols);
 		int NumRows();
 		int NumCols();
+		void LnNormalizeRows();
 		vector<T>& operator[](const int i);
 		const vector<T>& operator[](const int i) const;
 	private:

@@ -60,6 +60,37 @@ void Matrix::Print()
 	}
 }
 
+/*
+Given a matrix representing co-event frequency counts,
+this normalizes rows, turning them into probabilities.
+Working with probabilities in range [0,1] is a very bad idea in floating point land,
+so this places them in natural logarithm space instead.
+*/
+void Matrix::LnNormalizeRows()
+{
+	double norm;
+
+	for(int i = 0; i < _matrix.size(); i++){
+		norm = 0;
+		for(int j = 0; j < _matrix[0].size(); j++){
+			norm += _matrix[i][j];
+		}
+		if(norm <= 0){
+			cout << "ERROR norm < 0 (" << norm << ") in Train(), dying by div zero" << endl;
+		}
+		for(int j = 0; j < _matrix[0].size(); j++){
+			if(_matrix[i][j] > 0){
+				//This property helps avoid underflowing the (x/y) param to log function: log(x/y) = log(x) - log(y)
+				_matrix[i][j] = log(_matrix[i][j]) - log(norm);
+			}
+			else{
+				//Let negative-infinity signal zero probability in log-space
+				_matrix[i][j] = -numeric_limits<double>::infinity();
+			}
+		}
+	}
+}
+
 //Resets all matrix vals to zero; does not resize.
 void Matrix::Reset()
 {

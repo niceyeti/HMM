@@ -182,9 +182,6 @@ void DiscreteHmm::PrintModels()
 	}
 }
 
-
-
-
 /*
 Implements backward algorithm from Rabiner.
 */
@@ -270,7 +267,6 @@ double DiscreteHmm::_logSumExp(const vector<double>& vec, double b)
 	return b + log(sum);
 }
 
-
 /*
 Implements forward algorithm from Rabiner.
 @observations: a sequence of observations, whose discrete class is designated by integers
@@ -330,7 +326,6 @@ double DiscreteHmm::ForwardAlgorithm(const vector<int>& observations, const int 
 
 	return sum;
 }
-
 
 /*
 The Viterbi algorithm is nearly identical to the forward algorithm except for using a max() operation
@@ -402,6 +397,7 @@ double DiscreteHmm::Viterbi(const vector<int>& observations, const int t, vector
 			max.first = ptrCol[i];
 		}
 	}
+
 	//backtrack to get optimal state id sequence
 	output.back() = max.first;
 	for(i = t - 1; i >= 0; i--){
@@ -412,13 +408,13 @@ double DiscreteHmm::Viterbi(const vector<int>& observations, const int t, vector
 }
 
 /*
-
+Given an observation sequence, Baum-Welch will try to increased the likelihood of the observations
+given by the model. See Rabiner.
 */
 void DiscreteHmm::BaumWelch(const vector<int>& observations)
 {
 
 }
-
 
 /*
 Normal initialization training: read a bunch of data containing both labelled emissions
@@ -453,47 +449,9 @@ void DiscreteHmm::Train(DiscreteHmmDataset& dataset)
 	}
 
 	//normalize all state frequencies (making them probabilities in ln space)
-	_stateMatrix.GetSize(nrows,ncols);
-	for(i = 0; i < nrows; i++){
-		for(j = 0, norm = 0; j < ncols; j++){
-			norm += _stateMatrix[i][j];
-		}
-		if(norm <= 0){
-			cout << "ERROR norm < 0 (" << norm << ") in Train(), dying by div zero" << endl;
-		}
-		for(j = 0; j < ncols; j++){
-			if(_stateMatrix[i][j] > 0){
-				//This property helps avoid underflowing the (x/y) param to log function: log(x/y) = log(x) - log(y)
-				_stateMatrix[i][j] = log(_stateMatrix[i][j]) - log(norm);
-			}
-			else{
-				//Let negative-infinity signal zero probability in log-space
-				_stateMatrix[i][j] = -numeric_limits<double>::infinity();
-			}
-		}
-	}
+	_stateMatrix.LnNormalizeRows();
 
 	//normalize all emission frequencies (making them probabilities in ln space)
-	_transitionMatrix.GetSize(nrows,ncols);
-	for(i = 0; i < nrows; i++){
-		for(j = 0, norm = 0; j < ncols; j++){
-			norm += _transitionMatrix[i][j];
-		}
-		if(norm <= 0){
-			cout << "ERROR norm < 0 (" << norm << ") in Train(), dying by div zero" << endl;
-		}
-		for(j = 0; j < ncols; j++){
-			if(_transitionMatrix[i][j] > 0){
-				//This property helps avoid underflowing the (x/y) param to log function: log(x/y) = log(x) - log(y)
-				_transitionMatrix[i][j] = log(_transitionMatrix[i][j]) - log(norm);
-			}
-			else{
-				//Let negative-infinity signal zero probability in log-space
-				_transitionMatrix[i][j] = -numeric_limits<double>::infinity();
-			}
-		}
-	}
-
-
+	_transitionMatrix.LnNormalizeRows();
 }
 
