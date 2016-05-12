@@ -12,18 +12,24 @@ would look as follows:
 
 Where each line is a single example of state+emission_symbol, and the file
 is expected to contain lines of such examples.
+
+TODO: Template the Dataset class (for string, char, etc) for the class labels.
 */
 class DiscreteHmmDataset{
 	public:
-		DiscreteHmmDataset(const string& path);
-		DiscreteHmmDataset() = delete;		
+		DiscreteHmmDataset(const string& modelPath);
+		DiscreteHmmDataset() = delete;
 		~DiscreteHmmDataset();
 		void Build(const string& path);
 		void Clear();
 		int NumStates();
 		int NumSymbols();
+		int AddState(const string& state);
+		int AddSymbol(const string& symbol);
+		const string& GetSymbol(const int key);
+		const string& GetState(const int key);
+		vector<pair<int,int> > TrainingSequence;
 	private:
-		vector<pair<int,int> > _trainingSequence;
 		Flyweight<string> _stateFlyweight;
 		Flyweight<string> _symbolFlyweight;
 };

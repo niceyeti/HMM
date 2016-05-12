@@ -58,6 +58,29 @@ void ColumnMatrix::Reset()
 	}
 }
 
+void Matrix::Print()
+{
+	cout << setprecision(3);
+	for(int row = 0; row < _matrix[0].size(); row++){
+		for(int col = 0; col < _matrix.size(); col++){
+			cout << _matrix[col][row] << " ";
+		}
+		cout << endl;
+	}
+}
+
+int ColumnMatrix::NumCols()
+{
+	return _matrix.size();
+}
+
+int ColumnMatrix::NumRows()
+{
+	if(_matrix.size() == 0)
+		return 0;
+	return _matrix[0].size();
+}
+
 /*
 Resizes the matrix' internal storage per the parameters. Note that
 this function is cumulative: If matrix is presently larger than needed,

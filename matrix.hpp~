@@ -2,6 +2,8 @@
 #define MATRIX_HPP
 
 #include <vector>
+#include <iostream>
+#include <stdio>
 
 /*
 A lite Matrix class. This obeys normal matrix index conventions, indexing by [row][col].
@@ -15,6 +17,8 @@ class Matrix<T>{
 		void Clear();
 		void Reset();
 		void GetSize(int& rows, int& cols);
+		int NumRows();
+		int NumCols();
 		vector<T>& operator[](const int i);
 		const vector<T>& operator[](const int i) const;
 	private:
@@ -37,9 +41,11 @@ class ColumnMatrix<T>{
 	public:
 		ColumnMatrix();
 		~ColumnMatrix();
-		void Resize(int rows, int cols);
+		void Resize(const int rows, const int cols);
 		void Clear();
 		void Reset();
+		int NumRows();
+		int NumCols();
 		void GetSize(int& rows, int& cols);
 		inline vector<T>& GetColumn(const int i);
 		inline const vector<T>& GetColumn(const int i) const;

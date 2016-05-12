@@ -1,5 +1,27 @@
 #include "DiscreteHmmDataset.hpp"
 
+DiscreteHmmDataset::DiscreteHmmDataset(const string& path)
+{
+	Build(path);
+}
+
+DiscreteHmmDataset::Clear()
+{
+	TrainingSequence.clear();
+	_stateFlyweight.clear();
+	_symbolFlyweight.clear();
+}
+
+int AddState(const string& state)
+{
+	return _stateFlyweight.AddItem(state);
+}
+
+int AddSymbol(const string& symbol)
+{
+	return _symbolFlyweight(symbol);
+}
+
 /*
 Builds dataset in memory from a file of training sequences formatted as
 <pos>\t<word>.
@@ -38,24 +60,17 @@ void DiscreteHmmDataset::Build(const string& path);
 	}
 }
 
-const string& DiscreteHmmDataset::GetEmission(int key)
-{}
-
-const string& DiscreteHmmDataset::GetState(int key)
-{}
-
-
-DiscreteHmmDataset::DiscreteHmmDataset(const string& path)
+const string& DiscreteHmmDataset::GetEmission(const int key)
 {
-	Build(path);
+	return _symbolFlyweight.KeyToItem(key);
 }
 
-DiscreteHmmDataset::Clear()
+const string& DiscreteHmmDataset::GetState(const int key)
 {
-	TrainingSequence.clear();
-	_stateFlyweight.clear();
-	_symbolFlyweight.clear();
+	return _stateFlyweight.KeyToItem(key);
 }
+
+
 
 
 

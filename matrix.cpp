@@ -27,6 +27,18 @@ void Matrix::GetSize(int& rows, int& cols)
 	}
 }
 
+int Matrix::NumRows()
+{
+	return _matrix.size();
+}
+
+int Matrix::NumCols()
+{
+	if(_matrix.size() == 0)
+		return 0;
+	return _matrix[0].size();
+}
+
 void Matrix::Clear()
 {
 	if(_matrix.size() > 0){
@@ -34,6 +46,17 @@ void Matrix::Clear()
 			_matrix[i].clear();
 		}
 		_matrix.clear();
+	}
+}
+
+void Matrix::Print()
+{
+	for(int i = 0; i < _matrix.size(); i++){
+		for(int j = 0; j < _matrix[0].size(); j++){
+			cout << setprecision(3);
+			cout << _matrix[i][j] << " ";
+		}
+		cout << endl;
 	}
 }
 

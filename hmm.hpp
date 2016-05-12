@@ -33,15 +33,17 @@ These are required by IEEE 754. So note that -INF returned by any of this class'
 TODO: For large datasets, could implement another sparse matrix class for very large, sparse state/transition matrices.
 */
 class DiscreteHmm{
-	public: 
-		DiscreteHmm(const string& path);
+	public:
+		DiscreteHmm();
+		DiscreteHmm(const string& modelPath);
 		~DiscreteHmm();
-		
 		void Train(DiscreteHmmDataset& dataset);
 		void BaumWelch(const vector<int>& observations);
 		double Viterbi(const vector<int>& observations, const int t, vector<int>& output);
 		double ForwardAlgorithm(const vector<int>& observations, const int t);
 		double BackwardAlgorithm(const vector<int>& observation, const int t);
+		bool ParseModelFile(const string& modelPath);
+		void ClearModel();
 	private:
 		DiscreteHmmDataset _dataset;
 		ColumnMatrix _alphaLattice;
@@ -53,6 +55,8 @@ class DiscreteHmm{
 		Matrix _transitionMatrix;
 
 		double _logSumExp(const vector<double>& vec, double b);
+		bool _validate();
+
 };
 
 #endif

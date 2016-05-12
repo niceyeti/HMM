@@ -1,0 +1,19 @@
+import sys
+
+of = open("syntheticData.txt","w+")
+header = "From 'Principles of Autonomy and Decision Making' by Frazzoli,\
+a three-state,two-observation distribution for a Markov model of the same. I used
+"
+
+
+
+
+
+
+
+
+
+
+
+
+
