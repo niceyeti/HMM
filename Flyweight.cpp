@@ -15,10 +15,12 @@ Flyweight<T>::~Flyweight()
 template<typename T>
 int Flyweight<T>::AddItem(const T& item)
 {
-	_forwardTable[item] = _numKeys;
-	_reverseTable.resize(_numKeys);
+	_forwardTable.insert(std::pair<T,int>(item,_numKeys));
+	_reverseTable.resize(_numKeys+1);
 	_reverseTable[_numKeys] = item;
 	_numKeys++;
+
+	return _numKeys-1;
 }
 
 

@@ -42,28 +42,29 @@ bool DiscreteHmm::ParseModelFile(const string& modelPath)
 	this->Clear();
 
 	while(getline(modelFile,line)){
-		if(line[0]!= '#'){
+		if(line.length() > 0 && line[0]!= '#'){
 			param = line.substr(0,line.find('='));
 			argstr = line.substr(line.find('=')+1, line.length() - line.find('=') - 1);
-			if(param == "X="){
+			cout << "param+args:" << param << ":" << argstr << endl;
+			if(param == "X"){
 				//get the emission labels
-				args = _split(argstr,',');
+				_split(argstr,',',args);
 				for(i = 0; i < args.size(); i++){
 					_dataset.AddSymbol(args[i]);
 				}
 			}
-			else if(param == "Z="){
+			else if(param == "Z"){
 				//get the state labels
-				args = _split(argstr,',');
+				_split(argstr,',',args);
 				for(i = 0; i < args.size(); i++){
 					_dataset.AddState(args[i]);
 				}
 			}
-			else if(param == "A="){
+			else if(param == "A"){
 				//get the A matrix values
-				args = _split(argstr,';');
+				_split(argstr,';',args);
 				for(i = 0; i < args.size(); i++){
-					row = _split(args[i],',');
+					_split(args[i],',',row);
 					_stateMatrix.Resize(args.size(),row.size());
 					_stateMatrix.Reset();
 					for(j = 0; j < row.size(); j++){
@@ -72,11 +73,11 @@ bool DiscreteHmm::ParseModelFile(const string& modelPath)
 					}
 				}
 			}
-			else if(param == "B="){
+			else if(param == "B"){
 				//get the B matrix values
-				args = _split(argstr,';');
+				_split(argstr,';',args);
 				for(i = 0; i < args.size(); i++){
-					row = _split(args[i],',');
+					_split(args[i],',',row);
 					_transitionMatrix.Resize(args.size(),row.size());
 					_transitionMatrix.Reset();
 					for(j = 0; j < row.size(); j++){
@@ -85,20 +86,24 @@ bool DiscreteHmm::ParseModelFile(const string& modelPath)
 					}
 				}
 			}
-			else if(param == "Pi="){
+			else if(param == "Pi"){
 				//get the Pi values
-				args = _split(argstr,',');
+				_split(argstr,',',args);
 				for(i = 0; i < args.size(); i++){
 					double pi = stod(args[i]);
 					_pi.push_back(pi);
 				}
 			}
 		}
-
-		result = this->_validate();
-
-
 	}
+
+	result = this->_validate();
+	if(!result){
+		cout << "ERROR model may not have imported correctly" << endl;
+	}
+
+	PrintModel();
+
 	return result;
 }
 
@@ -131,24 +136,38 @@ bool DiscreteHmm::_validate()
 }
 
 //Returns vector of string just like python split()
-vector<string> DiscreteHmm::_split(const string& str, const char delim)
+void DiscreteHmm::_split(const string& str, const char delim, vector<string>& tokens)
 {
-	vector<string> vec;
+	int i, j, prev;
+	string temp;
 	vector<int> indices;
 
+	tokens.clear();
+
 	//find all indices of delimiter
-	for(int i = 0; i < str.length(); i++){
+	for(i = 0; i < str.length(); i++){
 		if(str[i] == delim){
 			indices.push_back(i);
 		}
 	}
+	cout << "got " << indices.size() << " indices from " << str << endl;
 
-	for(int prev = 0, i = 0; i < indices.size(); i++){
-		vec.push_back( str.substr(prev,i-prev-1));
-		prev = i + 1;
+	for(prev = 0, i = 0; i < indices.size(); i++){
+		temp = str.substr(prev,indices[i]-prev);
+		tokens.push_back(temp);
+		prev = indices[i] + 1;
+	}
+	//get the last substr
+	if(prev < str.length()){
+		temp = str.substr(prev, str.length()-prev);
+		tokens.push_back(temp);
 	}
 
-	return vec;
+	cout << "split got " << tokens.size() << " tokens: ";
+	for(i = 0; i < tokens.size(); i++){
+		cout << tokens[i] << " ";
+	}
+	cout << endl;
 }
 
 /*
@@ -205,7 +224,7 @@ void DiscreteHmm::WriteModel(const string& path)
 				outputFile << ",";
 			}
 		}
-		if(i < _stateMatrix.NumRows()-1)){
+		if(i < _stateMatrix.NumRows()-1){
 			outputFile << ";";
 		}
 	}
@@ -220,7 +239,7 @@ void DiscreteHmm::WriteModel(const string& path)
 				outputFile << ",";
 			}
 		}
-		if(i < _transitionMatrix.NumRows()-1)){
+		if(i < _transitionMatrix.NumRows()-1){
 			outputFile << ";";
 		}
 	}
@@ -241,7 +260,7 @@ void DiscreteHmm::WriteModel(const string& path)
 
 void DiscreteHmm::PrintModel()
 {
-	cout << "HMM Models\n" << endl;
+	cout << "\nHMM Models\n" << endl;
 
 	cout << "State transition matrix for states: ";
 	for(int i = 0; i < _dataset.NumStates(); i++){
@@ -249,7 +268,7 @@ void DiscreteHmm::PrintModel()
 	}
 	cout << endl;
 	_stateMatrix.Print();
-	cout << "\n" <<  endl;
+	cout <<  endl;
 
 	cout << "Emission matrix for symbols: ";
 	for(int i = 0; i < _dataset.NumSymbols(); i++){
@@ -257,13 +276,13 @@ void DiscreteHmm::PrintModel()
 	}
 	cout << endl;
 	_transitionMatrix.Print();
-	cout << "\n" <<  endl;
+	cout <<  endl;
 
 	cout << "Initial distribution (Pi): \n";
 	for(int i = 0; i < _pi.size(); i++){
 		cout << _pi[i] << ", ";
 	}
-	cout << "\n" << endl;
+	cout << endl;
 
 }
 

@@ -15,10 +15,12 @@ Flyweight<T>::~Flyweight()
 template<typename T>
 int Flyweight<T>::AddItem(const T& item)
 {
-	_forwardTable[item] = _numKeys;
-	_reverseTable.resize(_numKeys);
+	_forwardTable.insert(std::pair(item,_numKeys));
+	_reverseTable.resize(_numKeys+1);
 	_reverseTable[_numKeys] = item;
 	_numKeys++;
+
+	return _numKeys-1;
 }
 
 
@@ -49,7 +51,7 @@ T& Flyweight<T>::KeyToItem(const int key)
 template<typename T>
 int Flyweight<T>::GetItemKey(const T& item)
 {
-	map< T,int>::iterator key = _forwardTable.find(item);
+	typename map< T,int>::iterator key = _forwardTable.find(item);
 
 	if(key != _forwardTable.end()){
 		return *key;
