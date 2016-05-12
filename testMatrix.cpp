@@ -1,11 +1,17 @@
 #include "Matrix.hpp"
+#include "Matrix.cpp"
+#include "ColumnMatrix.cpp"
+#include "DiscreteHmmDataset.hpp"
+
 
 //using namespace std;
 
 int main(void)
 {
 	Matrix<double> doubles;
-	//ColumnMatrix<string> strings();
+	ColumnMatrix<string> strings();
+	DiscreteHmmDataset data;
+
 
 	doubles.Print();
 

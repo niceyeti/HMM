@@ -166,23 +166,105 @@ void DiscreteHmm::Clear()
 	_pi.clear();
 }
 
-void DiscreteHmm::PrintModels()
+void DiscreteHmm::WriteModel(const string& path)
+{
+	fstream outputFile;
+
+	outputFile.open(path.c_str(),ios::in);
+	if(!outputFile.is_open()){
+		cout << "ERROR could not open dataset file: " << path << endl;
+		return;
+	}
+
+	//write the symbols
+	outputFile << "X=";
+	for(int i = 0; i < _dataset.NumSymbols(); i++){
+		outputFile << _dataset.GetSymbol(i);
+		if(i < _dataset.NumSymbols()-1){
+			outputFile << ",";
+		}
+	}
+	outputFile << "\n";
+
+	//write the states
+	outputFile << "Z=";
+	for(int i = 0; i < _dataset.NumStates(); i++){
+		outputFile << _dataset.GetState(i);
+		if(i < _dataset.NumStates()-1){
+			outputFile << ",";
+		}
+	}
+	outputFile << "\n";
+
+	//write the A matrix
+	outputFile << "A=";
+	for(int i = 0; i < _stateMatrix.NumRows(); i++){
+		for(int j = 0; j < _stateMatrix.NumCols(); j++){
+			outputFile << _stateMatrix[i][j];
+			if(j < _stateMatrix.NumCols()-1){
+				outputFile << ",";
+			}
+		}
+		if(i < _stateMatrix.NumRows()-1)){
+			outputFile << ";";
+		}
+	}
+	outputFile << "\n";
+
+	//write the B matrix
+	outputFile << "B=";
+	for(int i = 0; i < _transitionMatrix.NumRows(); i++){
+		for(int j = 0; j < _transitionMatrix.NumCols(); j++){
+			outputFile << _transitionMatrix[i][j];
+			if(j < _transitionMatrix.NumCols()-1){
+				outputFile << ",";
+			}
+		}
+		if(i < _transitionMatrix.NumRows()-1)){
+			outputFile << ";";
+		}
+	}
+	outputFile << "\n";
+
+	//write the Pi values
+	outputFile << "Pi=";
+	for(int i = 0; i < _pi.size(); i++){
+		outputFile << _pi[i];
+		if(i < _pi.size() -1){
+			outputFile << ",";
+		}
+	}
+	outputFile << "\n";
+
+	outputFile.close();
+}
+
+void DiscreteHmm::PrintModel()
 {
 	cout << "HMM Models\n" << endl;
 
 	cout << "State transition matrix for states: ";
 	for(int i = 0; i < _dataset.NumStates(); i++){
-		cout << _dataset.GetState(i) << ",";
+		cout << _dataset.GetState(i) << ", ";
 	}
+	cout << endl;
 	_stateMatrix.Print();
 	cout << "\n" <<  endl;
 
 	cout << "Emission matrix for symbols: ";
 	for(int i = 0; i < _dataset.NumSymbols(); i++){
-		cout << _dataset.GetSymbol(i) << ",";
+		cout << _dataset.GetSymbol(i) << ", ";
 	}
+	cout << endl;
 	_transitionMatrix.Print();
 	cout << "\n" <<  endl;
+
+	cout << "Initial distribution (Pi): \n";
+	for(int i = 0; i < _pi.size(); i++){
+		cout << _pi[i] << ", ";
+	}
+	cout << "\n" << endl;
+
 }
 
 /*
@@ -211,7 +293,7 @@ double DiscreteHmm::BackwardAlgorithm(const vector<int>& observations, const int
 	}
 
 	//Induction
-	for(i = observation.size() - 2; i >= 0; i--){
+	for(i = observations.size() - 2; i >= 0; i--){
 		vector<double>& leftCol = _betaLattice[i];
 		vector<double>& rightCol = _betaLattice[i+1];
 		//foreach state in left state column

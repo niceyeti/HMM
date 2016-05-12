@@ -2,7 +2,12 @@
 #define DISCRETE_HMM_DATASET
 
 #include "Flyweight.hpp"
+#include "Flyweight.cpp"
+
 #include <string>
+#include <fstream>
+#include <iostream>
+
 
 using namespace std;
 

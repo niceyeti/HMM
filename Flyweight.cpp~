@@ -1,15 +1,18 @@
 #include "Flyweight.hpp"
 
+template<typename T>
 Flyweight<T>::Flyweight()
 {
 	_numKeys = 0;
 }
 
+template<typename T>
 Flyweight<T>::~Flyweight()
 {
 	Clear();
 }
 
+template<typename T>
 int Flyweight<T>::AddItem(const T& item)
 {
 	_forwardTable[item] = _numKeys;
@@ -18,6 +21,14 @@ int Flyweight<T>::AddItem(const T& item)
 	_numKeys++;
 }
 
+
+template<typename T>
+int Flyweight<T>::NumItems()
+{
+	return _numKeys;
+}
+
+template<typename T>
 void Flyweight<T>::Clear()
 {
 	_forwardTable.clear();
@@ -25,7 +36,8 @@ void Flyweight<T>::Clear()
 	_numKeys = 0;
 }
 
-T& Flyweight<T>::GetItem(const int key)
+template<typename T>
+T& Flyweight<T>::KeyToItem(const int key)
 {
 	if(key < 0 && key >= _numKeys){
 		cout << "ERROR itemNum out of range in GetItem()" << endl;
@@ -34,9 +46,10 @@ T& Flyweight<T>::GetItem(const int key)
 	return _reverseTable[key];
 }
 
+template<typename T>
 int Flyweight<T>::GetItemKey(const T& item)
 {
-	map<T,int>::iterator key = _forwardTable.find(item);
+	map< T,int>::iterator key = _forwardTable.find(item);
 
 	if(key != _forwardTable.end()){
 		return *key;

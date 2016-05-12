@@ -1,8 +1,12 @@
 #ifndef HMM_HPP
 #define HMM_HPP
 
-#include "DiscreteHmmDataset.hpp"
 #include "Matrix.hpp"
+//include the template code; this is how c++ hacks three-file format for template classes
+#include "Matrix.cpp"
+#include "ColumnMatrix.cpp"
+#include "DiscreteHmmDataset.hpp"
+
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -44,7 +48,8 @@ class DiscreteHmm{
 		double BackwardAlgorithm(const vector<int>& observations, const int t);
 		bool ParseModelFile(const string& modelPath);
 		void Clear();
-		void PrintModels();
+		void PrintModel();
+		void WriteModel(const string& path);
 	private:
 		DiscreteHmmDataset _dataset;
 		ColumnMatrix<double> _alphaLattice;
@@ -58,7 +63,6 @@ class DiscreteHmm{
 		vector<string> _split(const string& str, const char delim);
 		double _logSumExp(const vector<double>& vec, double b);
 		bool _validate();
-
 };
 
 #endif

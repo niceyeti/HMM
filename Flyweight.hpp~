@@ -3,6 +3,7 @@
 
 #include <map>
 #include <vector>
+#include <iostream>
 
 using namespace std;
 
@@ -12,7 +13,8 @@ This is useful since it allows strings (words, parts of speech, etc.) to
 be stored as simple ints for algorithmic purposes, then translated back as
 needed.
 */
-template<class T> class Flyweight{
+template<typename T>
+class Flyweight{
 	public:
 		~Flyweight();
 		Flyweight();		
@@ -20,6 +22,7 @@ template<class T> class Flyweight{
 		void Clear();
 		T& KeyToItem(const int key);
 		int GetItemKey(const T& item);
+		int NumItems();
 	private:
 		map<T,int> _forwardTable;
 		vector<T> _reverseTable;

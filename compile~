@@ -1,3 +1,4 @@
 #!/bin/bash
 echo compiling...
-g++ test.cpp Hmm.cpp Matrix.cpp ColumnMatrix.cpp DiscreteHmmDataset.cpp Flyweight.cpp --std=C++11 -o testHmm
+#g++ test.cpp Hmm.cpp Matrix.cpp ColumnMatrix.cpp DiscreteHmmDataset.cpp Flyweight.cpp --std=c++11 -o testHmm
+g++ test.cpp Hmm.cpp DiscreteHmmDataset.cpp --std=c++11 -o testHmm

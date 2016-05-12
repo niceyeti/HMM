@@ -33,7 +33,7 @@ class Matrix{
 		vector<vector<T> > _matrix;
 };
 
-#include "Matrix.cpp"
+//#include "Matrix.cpp"
 
 /*
 A lite column-matrix template, amenable to algorithms using lattices. Note no thought
@@ -67,6 +67,6 @@ class ColumnMatrix{
 		vector<vector<T> > _matrix;
 };
 
-#include "ColumnMatrix.cpp"
+//#include "ColumnMatrix.cpp"
 
 #endif
