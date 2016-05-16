@@ -59,6 +59,9 @@ class DiscreteHmm{
 		vector<double> _pi;
 		Matrix<double> _stateMatrix;
 		Matrix<double> _transitionMatrix;
+		vector<double> _gammaVector;
+		Matrix<double>	_chiMatrix;
+
 
 		void _split(const string& str, const char delim, vector<string>& tokens);
 		double _logSumExp(const vector<double>& vec, double b);

@@ -49,7 +49,7 @@ class DiscreteHmm{
 		bool ParseModelFile(const string& modelPath);
 		void Clear();
 		void PrintModel();
-		void WriteModel(const string& path);
+		void WriteModel(const string& path, bool asLogProbs=true);
 	private:
 		DiscreteHmmDataset _dataset;
 		ColumnMatrix<double> _alphaLattice;
