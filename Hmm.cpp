@@ -580,61 +580,49 @@ Updates the chi and gamma models given an observation sequence.
 
 @obsLogProb: The probability of the observation sequence, given previous lambda.
 */
-void DiscreteHmm::_bw_UpdateChiMatrix(const vector<int>& observations, double obsLogProb)
+void DiscreteHmm::_bw_UpdateChiMatrix(const vector<int>& observations)
 {
 	int t, i, j;
+	double obsProb, b;
+	vector<double> temp;
 
-	//TODO init sizes of chiMAtrx per obsrvations size
+	//TODO init sizes of chiMatrix per observations size
 
 	for(t = 1; t < _chiMatrix.size(); t++){
-		vector<double>& leftCol = _chiLattice[t-1];
+		vector<double>& chiCol = _chiLattice[t-1];
 		vector<double>& rightCol = _chiLattice[t];
 		vector<double>& alphaCol = _alphaLattice[t-1];
 		vector<double>& betaCol = _betaLattice[t];
 
+		obsProb = 0.0;
 		for(i = 0; i < ; i++){
 			for(j = 0; j < ; j++){
-				leftCol[i] = alphaCol[i] + _stateMatrix[i][j] + _transitionMatrix[i][j] + betaCol[j];
-				leftCol[] -= obsLogProb;
+				chiCol[i] = alphaCol[i] + _stateMatrix[i][j] + _transitionMatrix[i][j] + betaCol[j];
+				obsProb += chiCol[i];
 			}
 		}
-
-	}
-
-
-				temp[k] = (_stateMatrix[j][k] + rightCol[k] + _transitionMatrix[k][observations[i+1]]);
-				if(temp[k] > b){
-					b = temp[k];
-				}
-
-
-	//Induction, from 1 to t
-	for(i = 1; i <= t; i++){
-		vector<double>& leftCol = _viterbiLattice[i-1];
-		vector<double>& rightCol = _viterbiLattice[i];
-		vector<int>& ptrCol = _ptrLattice[i];
-		//foreach state in right column
-		for(j = 0; j < rightCol.size(); j++){
-			max.second = -10000000; //some large negative number
-			//iterate the previous states, given the current state
-			for(k = 0; k < leftCol.size(); k++){
-				temp = (_stateMatrix[k][j] + leftCol[k]);
-				if(temp > max.second){
-					max.second = temp;
-					max.first = k;
-				}
-			} //end-for: max contains maximum score and a pointer to its argmax state 
-			ptrCol[j]  = max.first;
-			leftCol[j] = max.second;
-			//lastly, multiply the observation probability back in, which was factored out of forward calculations
-			leftCol[j] += _transitionMatrix[j][ observations[i] ];
+		//normalize the probs
+		for(i = 0; i < ; i++){
+			for(j = 0; j < ; j++){
+				chiCol[i] -= obsProb;
+			}
 		}
 	}
 
-
+	//update the gamma matrix with the new chi model values
+	for(t = 0; t < _gammaMatrix.size(); t++){
+		for(i = 0; i < _chiMatrix.NumRows(); i++){
+			_gammaMatrix[t][i] = 0;
+			b = -NEG_INF;
+			for(j = 0; j < _stateMatrix; j++){
+				if()
+			}
+		}
+	}
 
 
 }
+
 
 /*
 Normal initialization training: read a bunch of data containing both labelled emissions
