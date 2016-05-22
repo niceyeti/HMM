@@ -58,9 +58,10 @@ class DiscreteHmm{
 		ColumnMatrix<int> _ptrLattice;
 		vector<double> _pi;
 		Matrix<double> _stateMatrix;
+		//transition matrix semantics: rows = states, cols = emissions
 		Matrix<double> _transitionMatrix;
-		vector<double> _gammaVector;
-		Matrix<double>	_chiMatrix;
+		Matrix<double> _gammaMatrix;
+		vector<Matrix<double> >	_chiMatrices;
 
 
 		void _split(const string& str, const char delim, vector<string>& tokens);

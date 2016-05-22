@@ -564,63 +564,138 @@ As far as implementation, the iterations are basically:
 		4) repeat from (1) until convergence
 
 */
-void DiscreteHmm::BaumWelch(const vector<int>& observations)
+double DiscreteHmm::BaumWelch(const vector<int>& observations)
 {
+	double obsProb;
+	const double convergence = 1.0;
+
+	cout << "TODO: need to handle cases when observations vector includes observations not previously seen" << endl;
+	cout << "in which case the model won't have the correct number of states, etc. This needs to be errr-checked" << endl;
+	cout << "elsewhere, I just don't want to pollute the code with error checks until the methods are stable" << endl;
+
+	//init
+
+
+	//until convergence, keep retraining the Chi Model, then using its values to maximize the likelihood of the data
+	while(true){
+		//expectation step: get the chi and gamma values (see Rabiner)
+		_retrainChiModel(observations);
+		//maximization step: based on the chi and gamma values, reset the state and emission probabilities
+		_updateModels();
 
 
 
+	}
+}
 
+/*
+This updates the state and emission probabilities based on the expectation given by the updated
+chi/gamma models. This assumes the chi/gamma models were just updated in the expectation step;
+this step is the corresponding maximization step.
+*/
+void DiscreteHmm::_updateModels(const vector<int>& observations)
+{
+	int t, i, j;
+	double maxChi, maxGamma, maxObsGamma, chiSum, gammaSum;
+	vector<double> chiVals, gammaVals, gammaObsVals;
 
+	//init the temp storage vectors for summing log probabilities
+	chiVals.resize(observations.size());
+	gammaVals.resize(observations.size());
+	gammaObsVals.resize(observations.size());
 
+	//update the Pi values: these are just the first column of the gamma values
+	for(i = 0; i < _gammaMatrix.NumRows(); i++){
+		_pi[i] = _gammaMatrix[i][0];
+	}
 
+	//update the A (state transition prob) values
+	for(i = 0; i < _stateMatrix.NumRows(); i++){
+		for(j = 0; j < _stateMatrix.NumCols(); j++){
+			maxChi = HUGE_NEGATIVE_DOUBLE;
+			maxGamma = HUGE_NEGATIVE_DOUBLE;
+			for(t = 0; t < observations.size(); t++){
+				chiVals[t] = _chiMatrices[t][i][j];
+				if(chiVals[t] > b){
+					maxChi = chiVals[t];
+				}
+				gammaVals[t] = _gammaMatrix[t][i];
+				if(gammaVals[t] > maxGamma){
+					maxGamma = gammaVals[t];
+				}
+			}
+			//use the log-sum-exp trick to get the sum of these probs, then divide them
+			_stateMatrix[i][j] = _logSumExp(chiVals,b) - _logSumExp(gammaVals,b);
+		}
+	}
+
+	//update the emission probabilities
+	for(i = 0; i < _transmissionMatrix.NumRows(); i++){
+		for(j = 0; j < _transmissionMatrix.NumCols(); j++){
+			for(t = 0; t < observations.size(); t++){
+				//only add the gamma value of this time step if the observed matches the kth emission symbol
+				gammaObsVals[t] = (observations[t] == k) ? _gammaMatrix[t][i];
+				if(gammaObsVals[t] > maxObsGamme){
+					maxObsGamma = gammaObsVals[t;]
+				}
+				//running total (denominator)
+				gammaVals[t] = _gammaMatrix[t][i]
+				if(gammaVals[t] > maxGamma){
+					maxGamma = gammaVals[t];
+				}
+			}
+			//divide the values calculated from above
+			_transmissionMatrix[i][j] = _logSumExp(gammaObsVals,maxObsGamma) - _logSumExp(gammaVals, maxGamma);
+		}
+	}
 }
 
 /*
 Updates the chi and gamma models given an observation sequence.
 
-@obsLogProb: The probability of the observation sequence, given previous lambda.
 */
-void DiscreteHmm::_bw_UpdateChiMatrix(const vector<int>& observations)
+void DiscreteHmm::_retrainChiModel(const vector<int>& observations)
 {
 	int t, i, j;
 	double obsProb, b;
-	vector<double> temp;
+	vector<double> normVec;
 
 	//TODO init sizes of chiMatrix per observations size
+	normVec.resize(_stateMatrix.NumRows() * _stateMatrix.NumCols());
 
-	for(t = 1; t < _chiMatrix.size(); t++){
-		vector<double>& chiCol = _chiLattice[t-1];
-		vector<double>& rightCol = _chiLattice[t];
-		vector<double>& alphaCol = _alphaLattice[t-1];
-		vector<double>& betaCol = _betaLattice[t];
+	for(t = 0; t < _chiMatrices.size(); t++){
+		Matrix& chiMatrix = _chiMatrices[t];
 
-		obsProb = 0.0;
-		for(i = 0; i < ; i++){
-			for(j = 0; j < ; j++){
-				chiCol[i] = alphaCol[i] + _stateMatrix[i][j] + _transitionMatrix[i][j] + betaCol[j];
-				obsProb += chiCol[i];
+		//set the chi matrix values
+		b = HUGE_NEGATIVE_DOUBLE;
+		for(i = 0; i < _stateMatrix.NumRows(); i++){
+			for(j = 0; j < _stateMatrix.NumRows(); j++){
+				chiMatrix[i][j] = _alphaLattice[t][i] + _stateMatrix[i][j] + _transitionMatrix[j][ observations[t+1] ] + _betaLattice[t+1][j];
+				//sum log-probs???
+				normVec[i * _stateMatrix.NumRows() + j] = chiMatrix[i][j];
+				if(chiMatrix[i][j] > b){
+					b = chiMatrix[i][j];
+				}
 			}
 		}
-		//normalize the probs
-		for(i = 0; i < ; i++){
-			for(j = 0; j < ; j++){
-				chiCol[i] -= obsProb;
+
+		//get the total probability of the observation per the log-sum-exp trick
+		obsProb = _logSumExp(normVec, b);
+		//normalize all the probs for this state after initializing them
+		for(i = 0; i < _stateMatrix.NumRows(); i++){
+			for(j = 0; j < _stateMatrix.NumRows(); j++){
+				chiMatrix[i][j] -= obsProb;
 			}
 		}
-	}
 
-	//update the gamma matrix with the new chi model values
-	for(t = 0; t < _gammaMatrix.size(); t++){
-		for(i = 0; i < _chiMatrix.NumRows(); i++){
+		//set the gamma values for each state (See Rabiner; for a given state i, its gamma value is the sum over all states j)
+		for(i = 0; i < _stateMatrix.NumRows(); i++){
 			_gammaMatrix[t][i] = 0;
-			b = -NEG_INF;
-			for(j = 0; j < _stateMatrix; j++){
-				if()
+			for(j = 0; j < _stateMatrix.NumRows(); j++){
+				_gammaMatrix[t][i] += chiMatrix[i][j];
 			}
 		}
 	}
-
-
 }
 
 
