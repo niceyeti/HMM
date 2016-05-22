@@ -20,6 +20,11 @@ void DiscreteHmmDataset::Clear()
 	_symbolFlyweight.Clear();
 }
 
+int DiscreteHmmDataset::NumInstances()
+{
+	return TrainingSequence.size();
+}
+
 int DiscreteHmmDataset::AddState(const string& state)
 {
 	return _stateFlyweight.AddItem(state);

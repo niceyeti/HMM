@@ -64,7 +64,7 @@ template<typename T>
 void ColumnMatrix<T>::Reset()
 {
 	for(int i = 0; i < _matrix.size(); i++){
-		memset((void*)_matrix[i].data(), 0, _matrix[i].size());
+		memset((void*)_matrix[i].data(), 0, sizeof(T)*_matrix[i].size());
 	}
 }
 

@@ -20,6 +20,11 @@ void DiscreteHmmDataset::Clear()
 	_symbolFlyweight.Clear();
 }
 
+int DiscreteHmmDataset::NumInstances()
+{
+
+}
+
 int DiscreteHmmDataset::AddState(const string& state)
 {
 	return _stateFlyweight.AddItem(state);
@@ -53,7 +58,7 @@ void DiscreteHmmDataset::Build(const string& path)
 	string pos;
 	int tabIndex, lineNum;
 
-	testFile.open(path,ios::in);
+	testFile.open(path.c_str(),ios::in);
 	if(!testFile.is_open()){
 		cout << "ERROR could not open dataset file: " << path << endl;
 	}

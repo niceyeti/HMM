@@ -336,14 +336,14 @@ double DiscreteHmm::BackwardAlgorithm(const vector<int>& observations, const int
 	}
 
 	//Resize and reset matrix to all zeroes
-	_betaLattice.Resize(_dataset.NumStates(), observations.size());
+	_betaLattice.Resize(_stateMatrix.NumRows(), observations.size());
 	_betaLattice.Reset();
-	temp.resize(_dataset.NumStates());
+	temp.resize(_stateMatrix.NumRows());
 
 	//init last column of beta matrix to 1.0 (which is 0.0, in logarithm land)
 	vector<double>& lastCol = _betaLattice.GetColumn(_betaLattice.NumCols()-1);
-	for(i = 0 ; i < lastCol.size(); i++){
-		lastCol[i] = 0;
+	for(i = 0; i < lastCol.size(); i++){
+		lastCol[i] = 0; //set all to 0 in log-prob space; in linear space, this is probability 1.0
 	}
 
 	//Induction
@@ -361,18 +361,21 @@ double DiscreteHmm::BackwardAlgorithm(const vector<int>& observations, const int
 				}
 			} //end-for: temp now contains all a_i's for log-sum-exp, and we have b, the max of them
 
-			//now run the log-sum-exp trick and store final result
-			leftCol[j] = _logSumExp(temp,b); //note we don't ad observation prob back in, since it can't be factored as it is in forward alg.
+			//now run the log-sum-exp trick
+			leftCol[j] = _logSumExp(temp,b); //note unlike forward alg, we don't add observation prob back in, since it can't be factored as it is in forward alg.
 		}
 	}
 
 	//Termination
 	vector<double>& firstCol = _betaLattice.GetColumn(0);
-	for(i = 0, sum = 0; i < firstCol.size(); i++){
-		sum += firstCol[i]; 
+	b = -1000000;
+	for(i = 0; i < firstCol.size(); i++){
+		if(firstCol[i] > b){
+			b = firstCol[i];
+		}
 	}
 
-	return sum;
+	return _logSumExp(firstCol,b);
 }
 
 /*
@@ -426,14 +429,18 @@ double DiscreteHmm::ForwardAlgorithm(const vector<int>& observations, const int 
 		cout << "ERROR insufficient t value in ForwardAlgorithm() t=" << t << endl;
 		return 1;
 	}
+	if(_dataset.NumInstances() == 0){
+		cout << "ERROR dataset empty in ForwardAlgorithm(), initialized HMM first" << endl;
+		return 1;
+	}
 
 	//Resize and reset matrix to all zeroes
 	_alphaLattice.Resize(_dataset.NumStates(), observations.size());
 	_alphaLattice.Reset();
-	temp.resize(_dataset.NumStates());
+	temp.resize(_stateMatrix.NumRows());
 
 	//init left-most column of alpha matrix to initial probs, given first observation
-	for(i = 0 ; i < _dataset.NumStates(); i++){
+	for(i = 0 ; i < _stateMatrix.NumRows(); i++){
 		_alphaLattice[0][i] = _pi[i] + _transitionMatrix[i][observations[0]];
 	}
 
@@ -452,19 +459,22 @@ double DiscreteHmm::ForwardAlgorithm(const vector<int>& observations, const int 
 				}
 			} //end-for: temp now contains all a_i's for log-sum-exp, and we have b, the max of them
 			//now run the log-sum-exp trick
-			leftCol[j] = _logSumExp(temp,b);
+			rightCol[j] = _logSumExp(temp,b);
 			//lastly, multiply the observation probability back in, which was factored out of forward calculations
-			leftCol[j] += _transitionMatrix[j][ observations[i] ];
+			rightCol[j] += _transitionMatrix[j][ observations[i] ];
 		}
 	}
 
 	//Termination
 	vector<double>& lastCol = _alphaLattice.GetColumn( _alphaLattice.NumCols()-1 );
-	for(i = 0, sum = 0; i < lastCol.size(); i++){
-		sum += lastCol[i];
+	b = -1000000;
+	for(i = 0; i < lastCol.size(); i++){
+		if(lastCol[i] > b){
+			b = lastCol[i];
+		}
 	}
 
-	return sum;
+	return _logSumExp(lastCol,b);
 }
 
 /*
@@ -490,14 +500,14 @@ double DiscreteHmm::Viterbi(const vector<int>& observations, const int t, vector
 	}
 
 	//Resize and reset matrix to all zeroes
-	_viterbiLattice.Resize(_dataset.NumStates(), observations.size());
+	_viterbiLattice.Resize(_stateMatrix.NumRows(), observations.size());
 	_viterbiLattice.Reset();
-	output.resize(observations.size());
 	//init the backpointer matrix
-	_ptrLattice.Resize(_dataset.NumStates(), observations.size());
+	_ptrLattice.Resize(_stateMatrix.NumRows(), observations.size());
+	_ptrLattice.Reset();
 
 	//init left-most column of alpha matrix to initial probs, given first observation
-	for(i = 0 ; i < _dataset.NumStates(); i++){
+	for(i = 0 ; i < _stateMatrix.NumRows(); i++){
 		_viterbiLattice[0][i] = _pi[i] + _transitionMatrix[i][observations[0]];
 		_ptrLattice[0][i] = -1; //point all initial pointers at <start> null state
 	}
@@ -525,21 +535,21 @@ double DiscreteHmm::Viterbi(const vector<int>& observations, const int t, vector
 		}
 	}
 
-	//Termination
-	//get max in last column
-	vector<double>& lastCol = _viterbiLattice[t];
-	vector<int>& ptrCol = _ptrLattice[t];
+	//Termination: get max in last column
+	vector<double>& lastCol = _viterbiLattice.GetColumn(_viterbiLattice.NumColumns()-1);
+	vector<int>& ptrCol = _ptrLattice.GetColumn(_ptrLattice.NumColumns()-1);
 	max.second = -1000000;
 	for(i = 0; i < lastCol.size(); i++){
-		if(max.second < lastCol[i]){
+		if(lastCol[i] > max.second){
 			max.second = lastCol[i];
-			max.first = ptrCol[i];
+			max.first = i;
 		}
 	}
 
 	//backtrack to get optimal state id sequence
+	output.resize(observations.size());
 	output.back() = max.first;
-	for(i = t - 1; i >= 0; i--){
+	for(i = output.size()-2; i >= 0; i--){
 		output[i] = _ptrLattice[i][ output[i+1] ];
 	}
 
@@ -576,7 +586,7 @@ double DiscreteHmm::BaumWelch(const vector<int>& observations)
 	cout << "elsewhere, I just don't want to pollute the code with error checks until the methods are stable" << endl;
 
 	//init
-
+	cout << "TODO: BaumWelch init" << endl;
 
 	//until convergence, keep retraining the Chi Model, then using its values to maximize the likelihood of the data
 	i = 0; maxIterations = 100;

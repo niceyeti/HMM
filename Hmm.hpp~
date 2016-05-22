@@ -58,6 +58,7 @@ class DiscreteHmm{
 		ColumnMatrix<int> _ptrLattice;
 		vector<double> _pi;
 		Matrix<double> _stateMatrix;
+		//transition matrix semantics: rows = states, cols = emissions
 		Matrix<double> _transitionMatrix;
 		Matrix<double> _gammaMatrix;
 		vector<Matrix<double> >	_chiMatrices;
