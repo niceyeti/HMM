@@ -563,10 +563,12 @@ As far as implementation, the iterations are basically:
 		3) use chi, gamma to determine lambda'
 		4) repeat from (1) until convergence
 
+See wikipedia for a decent example. There are many others elsewhere.
 */
 double DiscreteHmm::BaumWelch(const vector<int>& observations)
 {
-	double obsProb;
+	int i, maxIterations;
+	double obsProb, delta, lastProb;
 	const double convergence = 1.0;
 
 	cout << "TODO: need to handle cases when observations vector includes observations not previously seen" << endl;
@@ -577,15 +579,20 @@ double DiscreteHmm::BaumWelch(const vector<int>& observations)
 
 
 	//until convergence, keep retraining the Chi Model, then using its values to maximize the likelihood of the data
+	i = 0; maxIterations = 100;
 	while(true){
 		//expectation step: get the chi and gamma values (see Rabiner)
 		_retrainChiModel(observations);
 		//maximization step: based on the chi and gamma values, reset the state and emission probabilities
 		_updateModels();
-
-
-
+		lastProb = obsProb;
+		obsProb = GetObsProb(observations);
+		delta = lastProb - obsProb;
+		i++;
+		cout << i << "\t" << obsProb << endl;
 	}
+	cout << "BaumWelch completed" << endl;
+	PrintModels();
 }
 
 /*
