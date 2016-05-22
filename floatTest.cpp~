@@ -28,6 +28,10 @@ int main(void)
 	//expcet nan
 	cout << "-Infinity + Infinity: " << (-numeric_limits<double>::infinity() + numeric_limits<double>::infinity()) << endl;
 
+	cout << "min double: " << -numeric_limits<double>::max() << endl;
+
+	cout << "min double - 1: " << ((-numeric_limits<double>::max()) + (-numeric_limits<double>::max())) << endl;
+
 	return 0;
 }
 

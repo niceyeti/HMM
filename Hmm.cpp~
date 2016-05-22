@@ -337,7 +337,6 @@ double DiscreteHmm::BackwardAlgorithm(const vector<int>& observations, const int
 
 	//Resize and reset matrix to all zeroes
 	_betaLattice.Resize(_stateMatrix.NumRows(), observations.size());
-	_betaLattice.Reset();
 	temp.resize(_stateMatrix.NumRows());
 
 	//init last column of beta matrix to 1.0 (which is 0.0, in logarithm land)
@@ -352,7 +351,7 @@ double DiscreteHmm::BackwardAlgorithm(const vector<int>& observations, const int
 		vector<double>& rightCol = _betaLattice[i+1];
 		//foreach state in left state column
 		for(j = 0; j < leftCol.size(); j++){
-			b = -10000000; //some very large negative number
+			b = MIN_DOUBLE; //some very large negative number
 			//k iterates the right states, given the current left state
 			for(k = 0; k < rightCol.size(); k++){
 				temp[k] = (_stateMatrix[j][k] + rightCol[k] + _transitionMatrix[k][observations[i+1]]);
@@ -368,7 +367,7 @@ double DiscreteHmm::BackwardAlgorithm(const vector<int>& observations, const int
 
 	//Termination
 	vector<double>& firstCol = _betaLattice.GetColumn(0);
-	b = -1000000;
+	b = MIN_DOUBLE;
 	for(i = 0; i < firstCol.size(); i++){
 		if(firstCol[i] > b){
 			b = firstCol[i];
@@ -436,7 +435,6 @@ double DiscreteHmm::ForwardAlgorithm(const vector<int>& observations, const int 
 
 	//Resize and reset matrix to all zeroes
 	_alphaLattice.Resize(_dataset.NumStates(), observations.size());
-	_alphaLattice.Reset();
 	temp.resize(_stateMatrix.NumRows());
 
 	//init left-most column of alpha matrix to initial probs, given first observation
@@ -450,7 +448,7 @@ double DiscreteHmm::ForwardAlgorithm(const vector<int>& observations, const int 
 		vector<double>& rightCol = _alphaLattice[i];
 		//foreach state in right column
 		for(j = 0; j < rightCol.size(); j++){
-			b = -10000000; //some very large negative number
+			b = MIN_DOUBLE; //some very large negative number
 			//iterate the previous states, given the current state
 			for(k = 0; k < leftCol.size(); k++){
 				temp[k] = (_stateMatrix[k][j] + leftCol[k]);
@@ -467,7 +465,7 @@ double DiscreteHmm::ForwardAlgorithm(const vector<int>& observations, const int 
 
 	//Termination
 	vector<double>& lastCol = _alphaLattice.GetColumn( _alphaLattice.NumCols()-1 );
-	b = -1000000;
+	b = MIN_DOUBLE;
 	for(i = 0; i < lastCol.size(); i++){
 		if(lastCol[i] > b){
 			b = lastCol[i];
@@ -519,7 +517,7 @@ double DiscreteHmm::Viterbi(const vector<int>& observations, const int t, vector
 		vector<int>& ptrCol = _ptrLattice[i];
 		//foreach state in right column
 		for(j = 0; j < rightCol.size(); j++){
-			max.second = -10000000; //some large negative number
+			max.second = MIN_DOUBLE; //some large negative number
 			//iterate the previous states, given the current state
 			for(k = 0; k < leftCol.size(); k++){
 				temp = (_stateMatrix[k][j] + leftCol[k]);
@@ -536,9 +534,9 @@ double DiscreteHmm::Viterbi(const vector<int>& observations, const int t, vector
 	}
 
 	//Termination: get max in last column
-	vector<double>& lastCol = _viterbiLattice.GetColumn(_viterbiLattice.NumColumns()-1);
-	vector<int>& ptrCol = _ptrLattice.GetColumn(_ptrLattice.NumColumns()-1);
-	max.second = -1000000;
+	vector<double>& lastCol = _viterbiLattice.GetColumn(_viterbiLattice.NumCols()-1);
+	vector<int>& ptrCol = _ptrLattice.GetColumn(_ptrLattice.NumCols()-1);
+	max.second = MIN_DOUBLE;
 	for(i = 0; i < lastCol.size(); i++){
 		if(lastCol[i] > max.second){
 			max.second = lastCol[i];
@@ -589,20 +587,22 @@ double DiscreteHmm::BaumWelch(const vector<int>& observations)
 	cout << "TODO: BaumWelch init" << endl;
 
 	//until convergence, keep retraining the Chi Model, then using its values to maximize the likelihood of the data
-	i = 0; maxIterations = 100;
+	i = 0; maxIterations = 100; obsProb = 0;
 	while(true){
 		//expectation step: get the chi and gamma values (see Rabiner)
 		_retrainChiModel(observations);
 		//maximization step: based on the chi and gamma values, reset the state and emission probabilities
-		_updateModels();
+		_updateModels(observations);
 		lastProb = obsProb;
-		obsProb = GetObsProb(observations);
+		//re-run Forward and Backward algorithms to reset alpha/beta matrices; this is necessary RIGHT???!?!
+		obsProb = ForwardAlgorithm(observations,observations.size()-1);
+		BackwardAlgorithm(observations,observations.size()-1);
 		delta = lastProb - obsProb;
 		i++;
-		cout << i << "\t" << obsProb << endl;
+		cout << i << "\t" << obsProb << "\t" << delta << endl;
 	}
 	cout << "BaumWelch completed" << endl;
-	PrintModels();
+	PrintModel();
 }
 
 /*
@@ -619,7 +619,7 @@ void DiscreteHmm::_updateModels(const vector<int>& observations)
 	//init the temp storage vectors for summing log probabilities
 	chiVals.resize(observations.size());
 	gammaVals.resize(observations.size());
-	gammaObsVals.resize(observations.size());
+	//gammaObsVals.resize(observations.size());
 
 	//update the Pi values: these are just the first column of the gamma values
 	for(i = 0; i < _gammaMatrix.NumRows(); i++){
@@ -629,11 +629,11 @@ void DiscreteHmm::_updateModels(const vector<int>& observations)
 	//update the A (state transition prob) values
 	for(i = 0; i < _stateMatrix.NumRows(); i++){
 		for(j = 0; j < _stateMatrix.NumCols(); j++){
-			maxChi = HUGE_NEGATIVE_DOUBLE;
-			maxGamma = HUGE_NEGATIVE_DOUBLE;
+			maxChi = MIN_DOUBLE;
+			maxGamma = MIN_DOUBLE;
 			for(t = 0; t < observations.size(); t++){
 				chiVals[t] = _chiMatrices[t][i][j];
-				if(chiVals[t] > b){
+				if(chiVals[t] > maxChi){
 					maxChi = chiVals[t];
 				}
 				gammaVals[t] = _gammaMatrix[t][i];
@@ -642,34 +642,40 @@ void DiscreteHmm::_updateModels(const vector<int>& observations)
 				}
 			}
 			//use the log-sum-exp trick to get the sum of these probs, then divide them
-			_stateMatrix[i][j] = _logSumExp(chiVals,b) - _logSumExp(gammaVals,b);
+			_stateMatrix[i][j] = _logSumExp(chiVals,maxChi) - _logSumExp(gammaVals,maxGamma);
 		}
 	}
 
 	//update the emission probabilities
-	for(i = 0; i < _transmissionMatrix.NumRows(); i++){
-		for(j = 0; j < _transmissionMatrix.NumCols(); j++){
+	for(i = 0; i < _transitionMatrix.NumRows(); i++){
+		for(j = 0; j < _transitionMatrix.NumCols(); j++){
 			for(t = 0; t < observations.size(); t++){
 				//only add the gamma value of this time step if the observed matches the kth emission symbol
-				gammaObsVals[t] = (observations[t] == k) ? _gammaMatrix[t][i];
-				if(gammaObsVals[t] > maxObsGamme){
-					maxObsGamma = gammaObsVals[t;]
+				if(observations[t] == j){
+					gammaObsVals.push_back(_gammaMatrix[t][i]);
+					if(gammaObsVals.back() > maxObsGamma){
+						maxObsGamma = gammaObsVals.back();
+					}
 				}
 				//running total (denominator)
-				gammaVals[t] = _gammaMatrix[t][i]
+				gammaVals[t] = _gammaMatrix[t][i];
 				if(gammaVals[t] > maxGamma){
 					maxGamma = gammaVals[t];
 				}
 			}
 			//divide the values calculated from above
-			_transmissionMatrix[i][j] = _logSumExp(gammaObsVals,maxObsGamma) - _logSumExp(gammaVals, maxGamma);
+			if(gammaObsVals.size() > 0){
+				_transitionMatrix[i][j] = _logSumExp(gammaObsVals,maxObsGamma) - _logSumExp(gammaVals, maxGamma);
+			}
+			else{
+				_transitionMatrix[i][j] = MIN_DOUBLE; //no symbol matches, so set log probability to negative infinity
+			}
 		}
 	}
 }
 
 /*
 Updates the chi and gamma models given an observation sequence.
-
 */
 void DiscreteHmm::_retrainChiModel(const vector<int>& observations)
 {
@@ -684,7 +690,7 @@ void DiscreteHmm::_retrainChiModel(const vector<int>& observations)
 		Matrix& chiMatrix = _chiMatrices[t];
 
 		//set the chi matrix values
-		b = HUGE_NEGATIVE_DOUBLE;
+		b = MIN_DOUBLE;
 		for(i = 0; i < _stateMatrix.NumRows(); i++){
 			for(j = 0; j < _stateMatrix.NumRows(); j++){
 				chiMatrix[i][j] = _alphaLattice[t][i] + _stateMatrix[i][j] + _transitionMatrix[j][ observations[t+1] ] + _betaLattice[t+1][j];

@@ -13,6 +13,8 @@
 #include <cmath>
 #include <limits>
 
+//some very large negative number, such that any log-probability (negative numbers) would be larger
+#define MIN_DOUBLE -numeric_limits<double>::max()
 
 using namespace std;
 
@@ -42,7 +44,7 @@ class DiscreteHmm{
 		DiscreteHmm(const string& modelPath);
 		~DiscreteHmm();
 		void Train(DiscreteHmmDataset& dataset);
-		void BaumWelch(const vector<int>& observations);
+		double BaumWelch(const vector<int>& observations);
 		double Viterbi(const vector<int>& observations, const int t, vector<int>& output);
 		double ForwardAlgorithm(const vector<int>& observations, const int t);
 		double BackwardAlgorithm(const vector<int>& observations, const int t);
@@ -51,6 +53,9 @@ class DiscreteHmm{
 		void PrintModel();
 		void WriteModel(const string& path, bool asLogProbs=true);
 	private:
+		void _updateModels(const vector<int>& observations);
+		void _retrainChiModel(const vector<int>& observations);
+
 		DiscreteHmmDataset _dataset;
 		ColumnMatrix<double> _alphaLattice;
 		ColumnMatrix<double> _betaLattice;
