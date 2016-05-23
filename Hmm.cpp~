@@ -732,8 +732,6 @@ by implementing a Matrix class capable of handling such sparseness.
 */
 void DiscreteHmm::Train(DiscreteHmmDataset& dataset)
 {
-	int i;
-
 	//TODO: numerical storage could be wrapped in compiler/machine specific ifdefs, but I don't want to for now
 	//For every machine/compiler that's worth more than two cents, this should evaluate to true.
 	if(!numeric_limits<double>::has_infinity || !std::numeric_limits<double>::is_iec559){ //IEEE 754
@@ -749,7 +747,7 @@ void DiscreteHmm::Train(DiscreteHmmDataset& dataset)
 	_transitionMatrix.Reset();
 
 	//count all the frequencies
-	for(i = 1; i < dataset.TrainingSequence.size(); i++){
+	for(int i = 1; i < dataset.TrainingSequence.size(); i++){
 		_stateMatrix[ dataset.TrainingSequence[i-1].first ][dataset.TrainingSequence[i].first]++;
 		_transitionMatrix[ dataset.TrainingSequence[i].first ][ dataset.TrainingSequence[i].second ]++;
 	}
