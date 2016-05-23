@@ -311,7 +311,9 @@ void DiscreteHmm::PrintModel(bool asLogProbs)
 
 	cout << "State transition matrix for states: ";
 	for(i = 0; i < _dataset.NumStates(); i++){
-		cout << _dataset.GetState(i) << ", ";
+		cout << _dataset.GetState(i);
+		if(i < _dataset.NumStates() - 1)
+			cout << ", ";
 	}
 	cout << endl;
 	_stateMatrix.Print(!asLogProbs);
@@ -319,7 +321,9 @@ void DiscreteHmm::PrintModel(bool asLogProbs)
 
 	cout << "Emission matrix for symbols: ";
 	for(i = 0; i < _dataset.NumSymbols(); i++){
-		cout << _dataset.GetSymbol(i) << ", ";
+		cout << _dataset.GetSymbol(i);
+		if(i < _dataset.NumSymbols() - 1)
+			cout << ", ";
 	}
 	cout << endl;
 	_transitionMatrix.Print(!asLogProbs);
