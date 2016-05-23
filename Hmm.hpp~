@@ -14,7 +14,7 @@
 #include <limits>
 
 //some very large negative number, such that any log-probability (negative numbers) would be larger
-#define HUGE_NEGATIVE_DOUBLE -numeric_limits<double>::max()
+#define MIN_DOUBLE -numeric_limits<double>::max()
 
 using namespace std;
 
@@ -48,7 +48,7 @@ class DiscreteHmm{
 		double Viterbi(const vector<int>& observations, const int t, vector<int>& output);
 		double ForwardAlgorithm(const vector<int>& observations, const int t);
 		double BackwardAlgorithm(const vector<int>& observations, const int t);
-		bool ParseModelFile(const string& modelPath);
+		bool ReadModel(const string& modelPath);
 		void Clear();
 		void PrintModel();
 		void WriteModel(const string& path, bool asLogProbs=true);

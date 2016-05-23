@@ -15,7 +15,7 @@ Consumes a pre-made model contained in a .hmm file, formatted as:
 */
 DiscreteHmm::DiscreteHmm(const string& modelPath)
 {
-	ParseModelFile(modelPath);
+	ReadModel(modelPath);
 }
 
 DiscreteHmm::~DiscreteHmm()
@@ -26,8 +26,11 @@ DiscreteHmm::~DiscreteHmm()
 /*
 Reads in a HMM model (lambda) from a file. The order of the X, Y variables
 corresponds with the rows/columns of the A and B matrices.
+
+The .hmm file for now is assumed to contain regular probabilities, not log-probs, but this
+is very likely to be updated.
 */
-bool DiscreteHmm::ParseModelFile(const string& modelPath)
+bool DiscreteHmm::ReadModel(const string& modelPath)
 {
 	int i, j;
 	bool result = true;
@@ -69,8 +72,10 @@ bool DiscreteHmm::ParseModelFile(const string& modelPath)
 				_split(argstr,';',args);
 				for(i = 0; i < args.size(); i++){
 					_split(args[i],',',row);
-					_stateMatrix.Resize(args.size(),row.size());
-					_stateMatrix.Reset();
+					if(_stateMatrix.NumRows() < row.size()){
+						_stateMatrix.Resize(args.size(),row.size());
+						_stateMatrix.Reset();
+					}
 					for(j = 0; j < row.size(); j++){
 						double a = stod(row[j]);
 						if(a >= 0 && a <= 1){ //convert probs to ln-space
@@ -85,8 +90,11 @@ bool DiscreteHmm::ParseModelFile(const string& modelPath)
 				_split(argstr,';',args);
 				for(i = 0; i < args.size(); i++){
 					_split(args[i],',',row);
-					_transitionMatrix.Resize(args.size(),row.size());
-					_transitionMatrix.Reset();
+					if(_transitionMatrix.NumRows() < args.size()){
+						cout << "Resizing trans dim from " << _transitionMatrix.NumRows() << " to " << row.size() << endl;
+						_transitionMatrix.Resize(args.size(),row.size());
+						_transitionMatrix.Reset();
+					}
 					for(j = 0; j < row.size(); j++){
 						double b = stod(row[j]);
 						if(b >= 0 && b <= 1){ //convert probs to ln-space
@@ -196,6 +204,8 @@ void DiscreteHmm::Clear()
 	_stateMatrix.Clear();
 	_transitionMatrix.Clear();
 	_pi.clear();
+	_gammaMatrix.Clear();
+	_chiMatrices.clear();
 }
 
 /*
@@ -206,6 +216,7 @@ It is assumed any model in memory is in ln-space.
 */
 void DiscreteHmm::WriteModel(const string& path, bool asLogProbs)
 {
+	int i, j;
 	fstream outputFile;
 
 	outputFile.open(path.c_str(),ios::out);
@@ -216,7 +227,7 @@ void DiscreteHmm::WriteModel(const string& path, bool asLogProbs)
 
 	//write the symbols
 	outputFile << "X=";
-	for(int i = 0; i < _dataset.NumSymbols(); i++){
+	for(i = 0; i < _dataset.NumSymbols(); i++){
 		outputFile << _dataset.GetSymbol(i);
 		//cout << "oputptuing " << _dataset.GetSymbol(i) << endl;
 		if(i < _dataset.NumSymbols()-1){
@@ -227,7 +238,7 @@ void DiscreteHmm::WriteModel(const string& path, bool asLogProbs)
 
 	//write the states
 	outputFile << "Z=";
-	for(int i = 0; i < _dataset.NumStates(); i++){
+	for(i = 0; i < _dataset.NumStates(); i++){
 		outputFile << _dataset.GetState(i);
 		if(i < _dataset.NumStates()-1){
 			outputFile << ",";
@@ -237,8 +248,8 @@ void DiscreteHmm::WriteModel(const string& path, bool asLogProbs)
 
 	//write the A matrix
 	outputFile << "A=";
-	for(int i = 0; i < _stateMatrix.NumRows(); i++){
-		for(int j = 0; j < _stateMatrix.NumCols(); j++){
+	for(i = 0; i < _stateMatrix.NumRows(); i++){
+		for(j = 0; j < _stateMatrix.NumCols(); j++){
 			if(!asLogProbs && _stateMatrix[i][j] < 0){
 				outputFile << exp(_stateMatrix[i][j]);
 			}
@@ -257,8 +268,8 @@ void DiscreteHmm::WriteModel(const string& path, bool asLogProbs)
 
 	//write the B matrix
 	outputFile << "B=";
-	for(int i = 0; i < _transitionMatrix.NumRows(); i++){
-		for(int j = 0; j < _transitionMatrix.NumCols(); j++){
+	for(i = 0; i < _transitionMatrix.NumRows(); i++){
+		for(j = 0; j < _transitionMatrix.NumCols(); j++){
 			if(!asLogProbs && _transitionMatrix[i][j] < 0){
 				outputFile << exp(_transitionMatrix[i][j]);
 			}
@@ -277,7 +288,7 @@ void DiscreteHmm::WriteModel(const string& path, bool asLogProbs)
 
 	//write the Pi values
 	outputFile << "Pi=";
-	for(int i = 0; i < _pi.size(); i++){
+	for(i = 0; i < _pi.size(); i++){
 		if(!asLogProbs && _pi[i] < 0){
 			outputFile << exp(_pi[i]);
 		}
@@ -293,29 +304,36 @@ void DiscreteHmm::WriteModel(const string& path, bool asLogProbs)
 	outputFile.close();
 }
 
-void DiscreteHmm::PrintModel()
+void DiscreteHmm::PrintModel(bool asLogProbs)
 {
+	int i;
 	cout << "\nHMM Models\n" << endl;
 
 	cout << "State transition matrix for states: ";
-	for(int i = 0; i < _dataset.NumStates(); i++){
+	for(i = 0; i < _dataset.NumStates(); i++){
 		cout << _dataset.GetState(i) << ", ";
 	}
 	cout << endl;
-	_stateMatrix.Print();
+	_stateMatrix.Print(!asLogProbs);
 	cout <<  endl;
 
 	cout << "Emission matrix for symbols: ";
-	for(int i = 0; i < _dataset.NumSymbols(); i++){
+	for(i = 0; i < _dataset.NumSymbols(); i++){
 		cout << _dataset.GetSymbol(i) << ", ";
 	}
 	cout << endl;
-	_transitionMatrix.Print();
+	_transitionMatrix.Print(!asLogProbs);
 	cout <<  endl;
 
 	cout << "Initial distribution (Pi): \n";
-	for(int i = 0; i < _pi.size(); i++){
-		cout << _pi[i] << ", ";
+	for(i = 0; i < _pi.size(); i++){
+		if(_pi[i] < 0 && !asLogProbs)
+			cout << exp(_pi[i]);
+		else
+			cout << _pi[i];
+
+		if(i < _pi.size()-1)
+			cout << ", "; 
 	}
 	cout << endl;
 

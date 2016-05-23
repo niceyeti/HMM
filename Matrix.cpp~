@@ -60,13 +60,21 @@ void Matrix<T>::Clear()
 	}
 }
 
+/*
+@asExponentials: whether or not to raise e to the power of the matrix value or not,
+eg, exp(matrix[i][j]). The use-case for this is if the matrix is stochastic, and holds
+log-probabilities for numerical stability.
+*/
 template<typename T>
-void Matrix<T>::Print()
+void Matrix<T>::Print(bool convertLogProbs)
 {
 	for(int i = 0; i < _matrix.size(); i++){
 		for(int j = 0; j < _matrix[0].size(); j++){
 			cout << setprecision(3);
-			cout << _matrix[i][j] << " ";
+			if(convertLogProbs)
+				cout << exp(_matrix[i][j]) << " ";
+			else
+				cout << _matrix[i][j] << " ";
 		}
 		cout << endl;
 	}
@@ -118,6 +126,9 @@ void Matrix<T>::Reset()
 Resizes the matrix' internal storage per the parameters. Note that
 this function is cumulative: If matrix is presently larger than needed,
 this will not shrink the internal matrix size, only its representation.
+
+This function is not preserving/stable; any previous contents of the matrix may
+or may not be erased after resize.
 */
 template<typename T>
 void Matrix<T>::Resize(const int rows, const int cols)

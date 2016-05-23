@@ -48,9 +48,9 @@ class DiscreteHmm{
 		double Viterbi(const vector<int>& observations, const int t, vector<int>& output);
 		double ForwardAlgorithm(const vector<int>& observations, const int t);
 		double BackwardAlgorithm(const vector<int>& observations, const int t);
-		bool ParseModelFile(const string& modelPath);
+		bool ReadModel(const string& modelPath);
 		void Clear();
-		void PrintModel();
+		void PrintModel(bool asLogProbs=false);
 		void WriteModel(const string& path, bool asLogProbs=true);
 	private:
 		void _updateModels(const vector<int>& observations);
