@@ -151,7 +151,7 @@ bool DiscreteHmm::_validate()
 //Returns vector of string just like python split()
 void DiscreteHmm::_split(const string& str, const char delim, vector<string>& tokens)
 {
-	int i, j, prev;
+	int i, prev;
 	string temp;
 	vector<int> indices;
 
@@ -328,7 +328,7 @@ double DiscreteHmm::BackwardAlgorithm(const vector<int>& observations, const int
 {
 	int i, j, k;
 	vector<double> temp;
-	double sum, b;
+	double b;
 
 	if(t < 0 || t >= observations.size()){
 		cout << "ERROR invalid t value in BackwardAlgorithm()" << t << endl;
@@ -422,7 +422,7 @@ double DiscreteHmm::ForwardAlgorithm(const vector<int>& observations, const int 
 {
 	int i, j, k;
 	vector<double> temp;
-	double sum, b;
+	double b;
 
 	if(t < 1 || t >= observations.size()){
 		cout << "ERROR insufficient t value in ForwardAlgorithm() t=" << t << endl;
@@ -535,7 +535,6 @@ double DiscreteHmm::Viterbi(const vector<int>& observations, const int t, vector
 
 	//Termination: get max in last column
 	vector<double>& lastCol = _viterbiLattice.GetColumn(_viterbiLattice.NumCols()-1);
-	vector<int>& ptrCol = _ptrLattice.GetColumn(_ptrLattice.NumCols()-1);
 	max.second = MIN_DOUBLE;
 	for(i = 0; i < lastCol.size(); i++){
 		if(lastCol[i] > max.second){
@@ -603,6 +602,8 @@ double DiscreteHmm::BaumWelch(const vector<int>& observations)
 	}
 	cout << "BaumWelch completed" << endl;
 	PrintModel();
+
+	return obsProb;
 }
 
 /*
@@ -613,7 +614,7 @@ this step is the corresponding maximization step.
 void DiscreteHmm::_updateModels(const vector<int>& observations)
 {
 	int t, i, j;
-	double maxChi, maxGamma, maxObsGamma, chiSum, gammaSum;
+	double maxChi, maxGamma, maxObsGamma;
 	vector<double> chiVals, gammaVals, gammaObsVals;
 
 	//init the temp storage vectors for summing log probabilities
@@ -731,9 +732,6 @@ by implementing a Matrix class capable of handling such sparseness.
 */
 void DiscreteHmm::Train(DiscreteHmmDataset& dataset)
 {
-	int i, j, nrows, ncols;
-	double norm;
-
 	//TODO: numerical storage could be wrapped in compiler/machine specific ifdefs, but I don't want to for now
 	//For every machine/compiler that's worth more than two cents, this should evaluate to true.
 	if(!numeric_limits<double>::has_infinity || !std::numeric_limits<double>::is_iec559){ //IEEE 754
@@ -749,7 +747,7 @@ void DiscreteHmm::Train(DiscreteHmmDataset& dataset)
 	_transitionMatrix.Reset();
 
 	//count all the frequencies
-	for(i = 1; i < dataset.TrainingSequence.size(); i++){
+	for(int i = 1; i < dataset.TrainingSequence.size(); i++){
 		_stateMatrix[ dataset.TrainingSequence[i-1].first ][dataset.TrainingSequence[i].first]++;
 		_transitionMatrix[ dataset.TrainingSequence[i].first ][ dataset.TrainingSequence[i].second ]++;
 	}
