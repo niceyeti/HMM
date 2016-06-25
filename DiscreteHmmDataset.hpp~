@@ -37,6 +37,7 @@ class DiscreteHmmDataset{
 		int AddSymbol(const string& symbol);
 		const string& GetSymbol(const int key);
 		const string& GetState(const int key);
+		int NumInstances();
 		vector<pair<int,int> > TrainingSequence;
 	private:
 		Flyweight<string> _stateFlyweight;

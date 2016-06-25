@@ -156,7 +156,7 @@ bool DiscreteHmm::_validate()
 	return result;
 }
 
-//Returns vector of string just like python split()
+//Builds an output vector of string, just like python split()
 void DiscreteHmm::_split(const string& str, const char delim, vector<string>& tokens)
 {
 	int i, prev;
@@ -755,13 +755,13 @@ by implementing a Matrix class capable of handling such sparseness.
 TODO: Smoothing for unobserved transitions. Rather than setting them to zero, use some smoothing method (there
 are many).
 */
-void DiscreteHmm::Train(DiscreteHmmDataset& dataset)
+void DiscreteHmm::DirectTrain(DiscreteHmmDataset& dataset)
 {
 	//TODO: numerical storage could be wrapped in compiler/machine specific ifdefs, but I don't want to for now
 	//For every machine/compiler that's worth more than two cents, this should evaluate to true.
 	if(!numeric_limits<double>::has_infinity || !std::numeric_limits<double>::is_iec559){ //IEEE 754
 		cout << "ERROR double does not have infinity, recompile with some other signal value for zero probabilities in log space" << endl;
-		cout << "Consider updating your computer from steam to electric power." << endl;
+		cout << "Consider updating your computer to electric power." << endl;
 	}
 
 	//init the A matrix

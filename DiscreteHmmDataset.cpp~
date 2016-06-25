@@ -22,7 +22,7 @@ void DiscreteHmmDataset::Clear()
 
 int DiscreteHmmDataset::NumInstances()
 {
-
+	return TrainingSequence.size();
 }
 
 int DiscreteHmmDataset::AddState(const string& state)

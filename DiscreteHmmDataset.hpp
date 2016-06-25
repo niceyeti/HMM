@@ -13,7 +13,7 @@ using namespace std;
 /*
 Primitive data object class for consuming files containing training sequences
 formatted as follows, tab delimited:
-	<hidden state>\t<discrete emission>
+	<hidden state symbol>\t<discrete emission symbol>
 
 So a hmm with part-of-speech latent variables and word emission values
 would look as follows:

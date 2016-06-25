@@ -43,7 +43,7 @@ class DiscreteHmm{
 		DiscreteHmm();
 		DiscreteHmm(const string& modelPath);
 		~DiscreteHmm();
-		void Train(DiscreteHmmDataset& dataset);
+		void DirectTrain(DiscreteHmmDataset& dataset);
 		double BaumWelch(const vector<int>& observations);
 		double Viterbi(const vector<int>& observations, const int t, vector<int>& output);
 		double ForwardAlgorithm(const vector<int>& observations, const int t);

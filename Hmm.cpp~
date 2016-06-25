@@ -156,7 +156,7 @@ bool DiscreteHmm::_validate()
 	return result;
 }
 
-//Returns vector of string just like python split()
+//Builds an output vector of string, just like python split()
 void DiscreteHmm::_split(const string& str, const char delim, vector<string>& tokens)
 {
 	int i, prev;
@@ -751,6 +751,9 @@ and labelled hidden/latent states, and build the A and B matrices (as they're ca
 
 TODO: State and Transition matrices could be very large and sparse for some datasets; this could be resolved
 by implementing a Matrix class capable of handling such sparseness.
+
+TODO: Smoothing for unobserved transitions. Rather than setting them to zero, use some smoothing method (there
+are many).
 */
 void DiscreteHmm::Train(DiscreteHmmDataset& dataset)
 {

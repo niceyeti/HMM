@@ -47,7 +47,7 @@ int DiscreteHmmDataset::NumSymbols()
 
 /*
 Builds dataset in memory from a file of training sequences formatted as
-<pos>\t<word>.
+<hidden symbol>\t<emission symbol>.
 */
 void DiscreteHmmDataset::Build(const string& path)
 {

@@ -50,7 +50,7 @@ class DiscreteHmm{
 		double BackwardAlgorithm(const vector<int>& observations, const int t);
 		bool ReadModel(const string& modelPath);
 		void Clear();
-		void PrintModel();
+		void PrintModel(bool asLogProbs=false);
 		void WriteModel(const string& path, bool asLogProbs=true);
 	private:
 		void _updateModels(const vector<int>& observations);
