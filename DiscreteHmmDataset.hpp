@@ -11,9 +11,23 @@
 using namespace std;
 
 /*
-Primitive data object class for consuming files containing training sequences
-formatted as follows, tab delimited:
-	<hidden state symbol>\t<discrete emission symbol>
+Builds datasets as inputs for the HMM class. The datasets may be labelled <emissionSymbol:hiddenSymbol>,
+or unlabelled <emissionSymbol>. The latter are used for unsupervised learning using the
+Baum-Welch procedure.
+
+This gives two primary input file formats, (1) supervised/labelled data and (2) unsupervised/unlabelled data:
+
+	(1):
+	<emissionSymbol>\t<stateSymbol>
+	<emissionSymbol>\t<stateSymbol>
+	...
+
+	(2):
+	<emissionSymbol>\n
+	<emissionSymbol>\n
+	...
+
+Both files represent continuous sequences, such that successive lines represent sequential observations.
 
 So a hmm with part-of-speech latent variables and word emission values
 would look as follows:
@@ -23,13 +37,17 @@ Where each line is a single example of state+emission_symbol, and the file
 is expected to contain lines of such examples.
 
 TODO: Template the Dataset class (for string, char, etc) for the class labels.
+TODO: Encapsulate the supervised/unsupervised dataset states of this object; right now the HMM just uses it accordingly.
+
+Note that for unlabeled data, only observation/emissions are known to this class.
 */
 class DiscreteHmmDataset{
 	public:
 		DiscreteHmmDataset();
-		DiscreteHmmDataset(const string& dataPath);
+		DiscreteHmmDataset(const string& dataPath, bool isLabeledData=true);
 		~DiscreteHmmDataset();
-		void Build(const string& path);
+		void BuildLabeledDataset(const string& path);
+		void BuildUnlabeledDataset(const string& path);
 		void Clear();
 		int NumStates();
 		int NumSymbols();
@@ -38,7 +56,8 @@ class DiscreteHmmDataset{
 		const string& GetSymbol(const int key);
 		const string& GetState(const int key);
 		int NumInstances();
-		vector<pair<int,int> > TrainingSequence;
+		vector<pair<int,int> > LabeledDataSequence;
+		vector<int> UnlabeledDataSequence;
 	private:
 		Flyweight<string> _stateFlyweight;
 		Flyweight<string> _symbolFlyweight;

@@ -25,8 +25,9 @@ class Matrix{
 		void GetSize(int& rows, int& cols);
 		int NumRows();
 		int NumCols();
-		void Print(bool convertLogProbs=true);
+		void Print(bool convertLogProbs=false);
 		void LnNormalizeRows();
+		//[] gets a row from the matrix
 		vector<T>& operator[](const int i);
 		const vector<T>& operator[](const int i) const;
 	private:

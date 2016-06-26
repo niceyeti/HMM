@@ -14,9 +14,18 @@ int main(int argc, char** argv)
 	hmm.WriteModel("myHmm2.hmm",false);
 
 	DiscreteHmmDataset dataset;
-	dataset.Build("./data/data_100000_Points.txt");
+	dataset.BuildLabeledDataset("./data/data_100000_Points.txt");
 
+	//Build hidden and emission models directly from a labelled dataset
 	hmm.DirectTrain(dataset);
+	hmm.Clear();
+	dataset.Clear();
+
+
+	//test BaumWelch on unlabeled data
+	dataset.BuildUnlabeledDataset("./data/unlabeled_100000_Points.txt");
+	hmm.BaumWelch(dataset,2);
+
 
 	return 0;
 }

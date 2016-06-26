@@ -27,6 +27,7 @@ class Matrix{
 		int NumCols();
 		void Print(bool convertLogProbs=false);
 		void LnNormalizeRows();
+		//[] gets a row from the matrix (a std::vector)
 		vector<T>& operator[](const int i);
 		const vector<T>& operator[](const int i) const;
 	private:

@@ -44,7 +44,7 @@ class DiscreteHmm{
 		DiscreteHmm(const string& modelPath);
 		~DiscreteHmm();
 		void DirectTrain(DiscreteHmmDataset& dataset);
-		double BaumWelch(const vector<int>& observations);
+		double BaumWelch(DiscreteHmmDataset& dataset, const int numHiddenStates);
 		double Viterbi(const vector<int>& observations, const int t, vector<int>& output);
 		double ForwardAlgorithm(const vector<int>& observations, const int t);
 		double BackwardAlgorithm(const vector<int>& observations, const int t);
@@ -53,8 +53,11 @@ class DiscreteHmm{
 		void PrintModel(bool asLogProbs=false);
 		void WriteModel(const string& path, bool asLogProbs=true);
 	private:
+		void _initUniformDistribution();
 		void _updateModels(const vector<int>& observations);
-		void _retrainChiModel(const vector<int>& observations);
+		void _retrainXiModel(const vector<int>& observations);
+		void _resizeModel(int numStates, int numSymbols);
+		void _testLogSumExp();
 
 		DiscreteHmmDataset _dataset;
 		ColumnMatrix<double> _alphaLattice;
@@ -65,8 +68,9 @@ class DiscreteHmm{
 		Matrix<double> _stateMatrix;
 		//transition matrix semantics: rows = states, cols = emissions
 		Matrix<double> _transitionMatrix;
+
 		Matrix<double> _gammaMatrix;
-		vector<Matrix<double> >	_chiMatrices;
+		vector<Matrix<double> >	_xiMatrices;
 		void _split(const string& str, const char delim, vector<string>& tokens);
 		double _logSumExp(const vector<double>& vec, double b);
 		bool _validate();

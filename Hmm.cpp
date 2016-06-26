@@ -205,7 +205,18 @@ void DiscreteHmm::Clear()
 	_transitionMatrix.Clear();
 	_pi.clear();
 	_gammaMatrix.Clear();
-	_chiMatrices.clear();
+	_xiMatrices.clear();
+}
+
+/*
+Clears all models and resizes pi, state, and transition matrices.
+*/
+void DiscreteHmm::_resizeModel(int numStates, int numSymbols)
+{
+	Clear();
+	_pi.resize(numStates);
+	_stateMatrix.Resize(numStates, numStates);
+	_transitionMatrix.Resize(numStates, numSymbols);
 }
 
 /*
@@ -402,6 +413,13 @@ double DiscreteHmm::BackwardAlgorithm(const vector<int>& observations, const int
 /*
 An implementation of the log-sum-exp trick to avoid underflow in probability sums in linear space.
 For an explanation, see https://hips.seas.harvard.edu/blog/2013/01/09/computing-log-sum-exp/
+
+LSE applies in case when we want a sum of exponentials: log(exp(x1) + exp(x2) + ...)
+LSE is defined as:
+	LSE(X) = x* + log(exp(x1 - x*) + exp(x2 - x*) ...)  where x* is max{x:x subset X}
+
+@vec: The vector X of logarithms to LSE
+@b: The max x within X 
 */
 double DiscreteHmm::_logSumExp(const vector<double>& vec, double b)
 {
@@ -412,8 +430,6 @@ double DiscreteHmm::_logSumExp(const vector<double>& vec, double b)
 		//largest probability is zero (-inf in ln space), so return zero and avert exceptions from exp() function
 		return -numeric_limits<double>::infinity();
 	}
-
-	cout << "LogSumExp: DOES VEC INCLUDE B, OR IS B FULLY FACTORED?" << endl;
 
 	//sum the log-probs in linear space, shifted by b (where b is actually some negative number)
 	for(int i = 0; i < vec.size(); i++){
@@ -429,6 +445,35 @@ double DiscreteHmm::_logSumExp(const vector<double>& vec, double b)
 	}
 
 	return b + log(sum);
+}
+
+
+/*
+Verifies proper functioning of the log-sum exp function above, which is often poorly documented.
+I just generated values from scipy's logsumexp function for verification.
+
+	>>> from scipy import misc
+	>>> import math
+	>>> X = [math.log(float(x)) for x in range(1,101)]
+	>>> misc.logsumexp(X)
+	8.5271435222694052
+*/
+void DiscreteHmm::_testLogSumExp()
+{
+	double result, expected, maxX, epsilon;
+	vector<double> X;
+
+	for(int i = 1; i <= 100; i++){
+		X.push_back(log((double)i));
+	}
+	maxX = log(100.0);
+
+	expected = 	8.5271435222694052;
+	result = _logSumExp(X,maxX);
+
+	cout << "LogSumExp result: " << result << endl;
+	cout << "LogSumExp expected result: " << expected << endl;
+	cout << "Delta: " << fabs(expected - result) << endl;
 }
 
 /*
@@ -450,13 +495,9 @@ double DiscreteHmm::ForwardAlgorithm(const vector<int>& observations, const int 
 		cout << "ERROR insufficient t value in ForwardAlgorithm() t=" << t << endl;
 		return 1;
 	}
-	if(_dataset.NumInstances() == 0){
-		cout << "ERROR dataset empty in ForwardAlgorithm(), initialized HMM first" << endl;
-		return 1;
-	}
 
 	//Resize and reset matrix to all zeroes
-	_alphaLattice.Resize(_dataset.NumStates(), observations.size());
+	_alphaLattice.Resize(_stateMatrix.NumRows(), observations.size());
 	temp.resize(_stateMatrix.NumRows());
 
 	//init left-most column of alpha matrix to initial probs, given first observation
@@ -473,7 +514,7 @@ double DiscreteHmm::ForwardAlgorithm(const vector<int>& observations, const int 
 			b = MIN_DOUBLE; //some very large negative number
 			//iterate the previous states, given the current state
 			for(k = 0; k < leftCol.size(); k++){
-				temp[k] = (_stateMatrix[k][j] + leftCol[k]);
+				temp[k] = (_stateMatrix[k][j] + leftCol[k]); // p(S_k -> S_j) * alpha_k
 				if(temp[k] > b){
 					b = temp[k];
 				}
@@ -576,6 +617,35 @@ double DiscreteHmm::Viterbi(const vector<int>& observations, const int t, vector
 }
 
 /*
+A BaumWelch utility, initializes the pi vector, and the state and emission matrices. How these matrices are initialized
+can determine the optimum obtained by the algorithm.
+
+For now, just sets both matrices to uniform distributions of 1/N.
+*/
+void DiscreteHmm::_initUniformDistribution()
+{
+	//set the pi vector to a uniform distribution
+	for(int i = 0; i < _pi.size(); i++){
+		_pi[i] = 1.0 / (double)_pi.size();
+	}
+
+	//set the transition matrix to a uniform distribution
+	for(int i = 0; i < _transitionMatrix.NumRows(); i++){
+		for(int j = 0; j < _transitionMatrix.NumCols(); j++){
+			_transitionMatrix[i][j] = 1.0 / (double)_transitionMatrix[i].size();
+		}
+	}
+
+	//set the state matrix to a uniform distribution
+	for(int i = 0; i < _stateMatrix.NumRows(); i++){
+		for(int j = 0; j < _stateMatrix.NumCols(); j++){
+			_stateMatrix[i][j] = 1.0 / (double)_stateMatrix[i].size();
+		}
+	}
+}
+
+
+/*
 Given an observation sequence, Baum-Welch will maximize the likelihood of the observations
 given by the model. The maximization is local, not global, converging to a critical point. But See Rabiner.
 Greek letters correspond with Rabiner's notation as well.
@@ -587,32 +657,53 @@ As far as implementation, the iterations are basically:
 	to the training observations it is passed, thereby modifying it from whatever its initial state.
 
 	BW then uses these steps, in terms of implementation:
-		1) determine chi, gamma from observation sequence, lambda
+		1) determine Xi, gamma from observation sequence, lambda
 		2) Set forward variables (alpha and beta models)
-		3) use chi, gamma to determine lambda'
+		3) use Xi, gamma to determine lambda'
 		4) repeat from (1) until convergence
 
 See wikipedia for a decent example. There are many others elsewhere.
+
+@dataset: The unlabelled dataset from which to learn
+@numHiddenStates: The number of hidden states to initialize the hmm with
+
 */
-double DiscreteHmm::BaumWelch(const vector<int>& observations)
+double DiscreteHmm::BaumWelch(DiscreteHmmDataset& dataset, const int numHiddenStates)
 {
 	int i, maxIterations;
 	double obsProb, delta, lastProb;
 	const double convergence = 1.0;
+	vector<int>& observations = dataset.UnlabeledDataSequence;
+	string dummy;
 
 	cout << "TODO: need to handle cases when observations vector includes observations not previously seen" << endl;
 	cout << "in which case the model won't have the correct number of states, etc. This needs to be errr-checked" << endl;
 	cout << "elsewhere, I just don't want to pollute the code with error checks until the methods are stable" << endl;
+	cout << "TODO: define the temporary vars (xi/gamma matrices) recursively to cut down space consumption." << endl;
 
 	//init
-	cout << "TODO: BaumWelch init" << endl;
+	Clear();
+	//resize all the required models
+	_resizeModel(dataset.NumSymbols(), numHiddenStates); //resize the pi, state, and transition matrices to fit this data
+	_xiMatrices.resize(dataset.UnlabeledDataSequence.size());
+	for(int i = 0; i < _xiMatrices.size(); i++){
+		//resize every matrix in the xi matrices to be a square matrix by the number of hidden states
+		_xiMatrices[i].Resize(_stateMatrix.NumRows(), _stateMatrix.NumCols()); 
+	}
+	//gamma matrix is also just a square matrix, the same size as the state matrix
+	_gammaMatrix.Resize(_stateMatrix.NumRows(), _stateMatrix.NumCols()); 
+	//set the hmm-model to uniform initial values
+	_initUniformDistribution();
 
-	//until convergence, keep retraining the Chi Model, then using its values to maximize the likelihood of the data
+	//until convergence, keep retraining the Xi Model, then using its values to maximize the likelihood of the data
 	i = 0; maxIterations = 100; obsProb = 0;
+	//initialize the forward and backward values
+	obsProb = ForwardAlgorithm(observations,observations.size()-1);
+	BackwardAlgorithm(observations,observations.size()-1);
 	while(true){
-		//expectation step: get the chi and gamma values (see Rabiner)
-		_retrainChiModel(observations);
-		//maximization step: based on the chi and gamma values, reset the state and emission probabilities
+		//expectation step: get the Xi and gamma values (see Rabiner)
+		_retrainXiModel(observations);
+		//maximization step: based on the Xi and gamma values, reset the state and emission probabilities
 		_updateModels(observations);
 		lastProb = obsProb;
 		//re-run Forward and Backward algorithms to reset alpha/beta matrices; this is necessary RIGHT???!?!
@@ -621,6 +712,8 @@ double DiscreteHmm::BaumWelch(const vector<int>& observations)
 		delta = lastProb - obsProb;
 		i++;
 		cout << i << "\tp(obs): " << obsProb << "\tdelta: " << delta << endl;
+		cout << "Enter anything to cintunue: " << flush;
+		cin >> dummy;
 	}
 	cout << "BaumWelch completed" << endl;
 	PrintModel();
@@ -630,17 +723,17 @@ double DiscreteHmm::BaumWelch(const vector<int>& observations)
 
 /*
 This updates the state and emission probabilities based on the expectation given by the updated
-chi/gamma models. This assumes the chi/gamma models were just updated in the expectation step;
+Xi/gamma models. This assumes the Xi/gamma models were just updated in the expectation step;
 this step is the corresponding maximization step.
 */
 void DiscreteHmm::_updateModels(const vector<int>& observations)
 {
 	int t, i, j;
-	double maxChi, maxGamma, maxObsGamma;
-	vector<double> chiVals, gammaVals, gammaObsVals;
+	double maxXi, maxGamma, maxObsGamma;
+	vector<double> xiVals, gammaVals, gammaObsVals;
 
 	//init the temp storage vectors for summing log probabilities
-	chiVals.resize(observations.size());
+	xiVals.resize(observations.size());
 	gammaVals.resize(observations.size());
 	//gammaObsVals.resize(observations.size());
 
@@ -652,12 +745,12 @@ void DiscreteHmm::_updateModels(const vector<int>& observations)
 	//update the A (state transition prob) values
 	for(i = 0; i < _stateMatrix.NumRows(); i++){
 		for(j = 0; j < _stateMatrix.NumCols(); j++){
-			maxChi = MIN_DOUBLE;
+			maxXi = MIN_DOUBLE;
 			maxGamma = MIN_DOUBLE;
 			for(t = 0; t < observations.size(); t++){
-				chiVals[t] = _chiMatrices[t][i][j];
-				if(chiVals[t] > maxChi){
-					maxChi = chiVals[t];
+				xiVals[t] = _xiMatrices[t][i][j];
+				if(xiVals[t] > maxXi){
+					maxXi = xiVals[t];
 				}
 				gammaVals[t] = _gammaMatrix[t][i];
 				if(gammaVals[t] > maxGamma){
@@ -665,7 +758,7 @@ void DiscreteHmm::_updateModels(const vector<int>& observations)
 				}
 			}
 			//use the log-sum-exp trick to get the sum of these probs, then divide them
-			_stateMatrix[i][j] = _logSumExp(chiVals,maxChi) - _logSumExp(gammaVals,maxGamma);
+			_stateMatrix[i][j] = _logSumExp(xiVals,maxXi) - _logSumExp(gammaVals,maxGamma);
 		}
 	}
 
@@ -698,29 +791,29 @@ void DiscreteHmm::_updateModels(const vector<int>& observations)
 }
 
 /*
-Updates the chi and gamma models given an observation sequence.
+Updates the Xi and gamma models given an observation sequence.
 */
-void DiscreteHmm::_retrainChiModel(const vector<int>& observations)
+void DiscreteHmm::_retrainXiModel(const vector<int>& observations)
 {
 	int t, i, j;
 	double obsProb, b;
 	vector<double> normVec;
 
-	//TODO init sizes of chiMatrix per observations size
+	//TODO init sizes of XiMatrix per observations size
 	normVec.resize(_stateMatrix.NumRows() * _stateMatrix.NumCols());
 
-	for(t = 0; t < _chiMatrices.size(); t++){
-		Matrix<double>& chiMatrix = _chiMatrices[t];
+	for(t = 0; t < _xiMatrices.size(); t++){
+		Matrix<double>& XiMatrix = _xiMatrices[t];
 
-		//set the chi matrix values
+		//set the Xi matrix values
 		b = MIN_DOUBLE;
 		for(i = 0; i < _stateMatrix.NumRows(); i++){
 			for(j = 0; j < _stateMatrix.NumRows(); j++){
-				chiMatrix[i][j] = _alphaLattice[t][i] + _stateMatrix[i][j] + _transitionMatrix[j][ observations[t+1] ] + _betaLattice[t+1][j];
+				XiMatrix[i][j] = _alphaLattice[t][i] + _stateMatrix[i][j] + _transitionMatrix[j][ observations[t+1] ] + _betaLattice[t+1][j];
 				//sum log-probs???
-				normVec[i * _stateMatrix.NumRows() + j] = chiMatrix[i][j];
-				if(chiMatrix[i][j] > b){
-					b = chiMatrix[i][j];
+				normVec[i * _stateMatrix.NumRows() + j] = XiMatrix[i][j];
+				if(XiMatrix[i][j] > b){
+					b = XiMatrix[i][j];
 				}
 			}
 		}
@@ -730,7 +823,7 @@ void DiscreteHmm::_retrainChiModel(const vector<int>& observations)
 		//normalize all the probs for this state after initializing them
 		for(i = 0; i < _stateMatrix.NumRows(); i++){
 			for(j = 0; j < _stateMatrix.NumRows(); j++){
-				chiMatrix[i][j] -= obsProb;
+				XiMatrix[i][j] -= obsProb;
 			}
 		}
 
@@ -738,7 +831,7 @@ void DiscreteHmm::_retrainChiModel(const vector<int>& observations)
 		for(i = 0; i < _stateMatrix.NumRows(); i++){
 			_gammaMatrix[t][i] = 0;
 			for(j = 0; j < _stateMatrix.NumRows(); j++){
-				_gammaMatrix[t][i] += chiMatrix[i][j];
+				_gammaMatrix[t][i] += XiMatrix[i][j];
 			}
 		}
 	}
@@ -757,14 +850,14 @@ are many).
 */
 void DiscreteHmm::DirectTrain(DiscreteHmmDataset& dataset)
 {
-	//TODO: numerical storage could be wrapped in compiler/machine specific ifdefs, but I don't want to for now
-	//For every machine/compiler that's worth more than two cents, this should evaluate to true.
+	//TODO: numerical storage could be wrapped in compiler/maXine specific ifdefs, but I don't want to for now
+	//For every maXine/compiler that's worth more than two cents, this should evaluate to true.
 	if(!numeric_limits<double>::has_infinity || !std::numeric_limits<double>::is_iec559){ //IEEE 754
 		cout << "ERROR double does not have infinity, recompile with some other signal value for zero probabilities in log space" << endl;
 		cout << "Consider updating your computer to electric power." << endl;
 	}
 
-	cout << "Training directly on " << dataset.TrainingSequence.size() << " labelled examples..." << endl;
+	cout << "Training directly on " << dataset.LabeledDataSequence.size() << " labelled examples..." << endl;
 
 	//init the A matrix
 	_stateMatrix.Resize(dataset.NumStates(), dataset.NumStates());
@@ -774,9 +867,9 @@ void DiscreteHmm::DirectTrain(DiscreteHmmDataset& dataset)
 	_transitionMatrix.Reset();
 
 	//count all the frequencies
-	for(int i = 1; i < dataset.TrainingSequence.size(); i++){
-		_stateMatrix[ dataset.TrainingSequence[i-1].first ][dataset.TrainingSequence[i].first]++;
-		_transitionMatrix[ dataset.TrainingSequence[i].first ][ dataset.TrainingSequence[i].second ]++;
+	for(int i = 1; i < dataset.LabeledDataSequence.size(); i++){
+		_stateMatrix[ dataset.LabeledDataSequence[i-1].first ][dataset.LabeledDataSequence[i].first]++;
+		_transitionMatrix[ dataset.LabeledDataSequence[i].first ][ dataset.LabeledDataSequence[i].second ]++;
 		//if(i % 100 == 99)
 		//	cout << i << endl;
 	}
