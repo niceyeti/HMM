@@ -489,7 +489,7 @@ double DiscreteHmm::ForwardAlgorithm(const vector<int>& observations, const int 
 {
 	int i, j, k;
 	vector<double> temp;
-	double b;
+	double b, pObs;
 
 	if(t < 1 || t >= observations.size()){
 		cout << "ERROR insufficient t value in ForwardAlgorithm() t=" << t << endl;
@@ -535,7 +535,10 @@ double DiscreteHmm::ForwardAlgorithm(const vector<int>& observations, const int 
 		}
 	}
 
-	return _logSumExp(lastCol,b);
+	pObs = _logSumExp(lastCol,b);
+	cout << "Forward algorithm completed. P(observation): " << pObs << endl;
+
+	return pObs;
 }
 
 /*

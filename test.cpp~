@@ -24,7 +24,7 @@ int main(int argc, char** argv)
 
 	//test BaumWelch on unlabeled data
 	dataset.BuildUnlabeledDataset("./data/unlabeled_100000_Points.txt");
-	hmm.BaumWelch(dataset);
+	hmm.BaumWelch(dataset,2);
 
 
 	return 0;
