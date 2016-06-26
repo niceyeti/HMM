@@ -620,7 +620,7 @@ double DiscreteHmm::BaumWelch(const vector<int>& observations)
 		BackwardAlgorithm(observations,observations.size()-1);
 		delta = lastProb - obsProb;
 		i++;
-		cout << i << "\t" << obsProb << "\t" << delta << endl;
+		cout << i << "\tp(obs): " << obsProb << "\tdelta: " << delta << endl;
 	}
 	cout << "BaumWelch completed" << endl;
 	PrintModel();
@@ -755,14 +755,16 @@ by implementing a Matrix class capable of handling such sparseness.
 TODO: Smoothing for unobserved transitions. Rather than setting them to zero, use some smoothing method (there
 are many).
 */
-void DiscreteHmm::Train(DiscreteHmmDataset& dataset)
+void DiscreteHmm::DirectTrain(DiscreteHmmDataset& dataset)
 {
 	//TODO: numerical storage could be wrapped in compiler/machine specific ifdefs, but I don't want to for now
 	//For every machine/compiler that's worth more than two cents, this should evaluate to true.
 	if(!numeric_limits<double>::has_infinity || !std::numeric_limits<double>::is_iec559){ //IEEE 754
 		cout << "ERROR double does not have infinity, recompile with some other signal value for zero probabilities in log space" << endl;
-		cout << "Consider updating your computer from steam to electric power." << endl;
+		cout << "Consider updating your computer to electric power." << endl;
 	}
+
+	cout << "Training directly on " << dataset.TrainingSequence.size() << " labelled examples..." << endl;
 
 	//init the A matrix
 	_stateMatrix.Resize(dataset.NumStates(), dataset.NumStates());
@@ -775,6 +777,8 @@ void DiscreteHmm::Train(DiscreteHmmDataset& dataset)
 	for(int i = 1; i < dataset.TrainingSequence.size(); i++){
 		_stateMatrix[ dataset.TrainingSequence[i-1].first ][dataset.TrainingSequence[i].first]++;
 		_transitionMatrix[ dataset.TrainingSequence[i].first ][ dataset.TrainingSequence[i].second ]++;
+		//if(i % 100 == 99)
+		//	cout << i << endl;
 	}
 
 	//normalize all state frequencies (making them probabilities in ln space)
@@ -782,5 +786,8 @@ void DiscreteHmm::Train(DiscreteHmmDataset& dataset)
 
 	//normalize all emission frequencies (making them probabilities in ln space)
 	_transitionMatrix.LnNormalizeRows();
+
+	cout << "HMM training completed." << endl;
+	this->PrintModel();
 }
 

@@ -80,6 +80,38 @@ def walkMatrix(initialState,matrix,n,symbols):
 	return walk
 
 
+"""
+This stochastically chooses the next state based on the conditional
+distribution of hidden states, given the current hidden state.
+
+@currentState: the row index of the current state
+@matrix: a stochastic matrix, for which the rows is the conditional distributions for the current state
+"""
+def selectNextState(currentState,matrix):
+	#randomly choose a next state
+	r = float(random.randint(1,10000)) / 10000.0 #generate a random, ten-thousandths precision number in 0.001-1.000
+	#check for which probability interval 'r' is in.
+	condDistribution = matrix[currentState] #get the row corresponding with the present state's conditional distribution
+	#normalize the row
+	normal = float(sum(condDistribution))
+	condDistribution = [(p / normal) for p in condDistribution]
+	#print(str(matrix))
+	#print("curstate: "+str(curState))
+	i = 0
+	cumulativeProb = 0.001
+	foundNext = False
+	while not foundNext:
+		cumulativeProb += condDistribution[i]
+		if r <= cumulativeProb:
+			foundNext = True
+		else:
+			i += 1
+	#post loop: i points to the index of the next state
+	return i
+
+
+
+
 
 #rows and cols of both matrices correspond to "acgt"
 plusModel = [ \
@@ -101,8 +133,8 @@ hiddenMatrix = [ \
 [0.97, 0.03], \
 [0.005, 0.999]]
 
-#symbols = "acgt"
-#hiddenSymbols = "+-"
+emissionSymbols = "acgt"
+hiddenSymbols = "+-"
 #walk = walkMatrix(1,hiddenMatrix,5000,hiddenSymbols)
 #print(walk)
 
@@ -112,49 +144,57 @@ hiddenMatrix = [ \
 inCpgIsland = False
 n = 0
 ctr = 0 #num chars output contiguously for the current state. So if the current sequence is: ----++, then ctr is 2, because of ++.
-minCpgSymbols = 50 #minimum number of cpg chars to output, or rather how long we clamp the cpg island state
-minNonCpgSymbols = 500 #same as prior, but for non-cpg regions
+minCpgs = 4 #minimum number of cpg chars to output, or rather how long we clamp the cpg island state
+minNonCpgs = 20 #same as prior, but for non-cpg regions
 CPG = 1
 NON_CPG = 0
-while n < 100000:
-	#decide which hidden state we are in now
-	if inCpgIsland and ctr < minCpgs:
-		ctr+=1
-		state = CPG
-	elif inCpgIsland and ctr >= minCpgs: #emitted enough cpg chars, so randomly decide whether or not to jump states
-		r = float(random.randint(1,1000))/1000.0
-		
 
-
-		#randomly choose a next state
-		r = float(random.randint(1,10000)) / 10000.0 #generate a random, ten-thousandths precision number in 0.001-1.000
-		#check for which probability interval 'r' is in.
-		condDistribution = matrix[givenState] #get the row corresponding with the present state's conditional distribution
-		#normalize the row
-		condDistribution = [(p / float(sum(condDistribution))) for p in condDistribution]
-		i = 0
-		cumulativeProb = 0.0
-		foundNext = False
-		while not foundNext:
-			cumulativeProb += condDistribution[i]
-			if r <= cumulativeProb:
-				foundNext = True
-			else:
-				i += 1
-		#post loop: i points to the index of the next state
-		givenState = i
-	
+#set initial state randomly
+curState = random.randint(1,100) % len(hiddenSymbols)
+emissionState = random.randint(1,100) % len(emissionSymbols)
+output = ""
+numDataPoints = 100000
 
 
 
+#walk according to the cross product of stochastic matrices
+while n < numDataPoints:
+	#save the last state to detect state transitions
+	prevState = curState
+
+	#choose the next hidden state
+	if prevState == CPG and ctr < minCpgs:
+		ctr += 1
+	elif prevState == CPG and ctr >= minCpgs: #emitted enough cpg chars, so randomly decide whether or not to jump states
+		curState = selectNextState(prevState, hiddenMatrix)
+	elif prevState == NON_CPG and ctr < minNonCpgs:
+		ctr += 1
+	elif prevState == NON_CPG and ctr >= minNonCpgs: #emitted enough cpg chars, so randomly decide whether or not to jump states
+		curState = selectNextState(prevState, hiddenMatrix)
+	else:
+		print("ERROR unreachable")
+
+	#reset the ctr when hidden state flips
+	if curState != prevState:
+		ctr = 0
+
+	#based on the next hidden state, choose a random emission symbol
+	if curState == CPG:
+		emissionState = selectNextState(emissionState, plusModel)
+	elif curState == NON_CPG:
+		emissionState = selectNextState(emissionState, minusModel)
+
+	emission = emissionSymbols[emissionState]
+	stateSymbol = hiddenSymbols[curState]
+	#print(emission+" "+stateSymbol)
+	output += (emission+"\t"+stateSymbol+"\n")
+	n += 1
 
 
-
-
-
-#outputFile = open("data.txt","w+")
-
-#generate 
+#write the data
+outputFile = open("data.txt","w+")
+outputFile.write(output)
+outputFile.close()
 
 
 

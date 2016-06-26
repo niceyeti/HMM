@@ -620,7 +620,7 @@ double DiscreteHmm::BaumWelch(const vector<int>& observations)
 		BackwardAlgorithm(observations,observations.size()-1);
 		delta = lastProb - obsProb;
 		i++;
-		cout << i << "\t" << obsProb << "\t" << delta << endl;
+		cout << i << "\tp(obs): " << obsProb << "\tdelta: " << delta << endl;
 	}
 	cout << "BaumWelch completed" << endl;
 	PrintModel();
@@ -764,6 +764,8 @@ void DiscreteHmm::DirectTrain(DiscreteHmmDataset& dataset)
 		cout << "Consider updating your computer to electric power." << endl;
 	}
 
+	cout << "Training directly on " << dataset.TrainingSequence.size() << " labelled examples..." << endl;
+
 	//init the A matrix
 	_stateMatrix.Resize(dataset.NumStates(), dataset.NumStates());
 	_stateMatrix.Reset();
@@ -775,6 +777,8 @@ void DiscreteHmm::DirectTrain(DiscreteHmmDataset& dataset)
 	for(int i = 1; i < dataset.TrainingSequence.size(); i++){
 		_stateMatrix[ dataset.TrainingSequence[i-1].first ][dataset.TrainingSequence[i].first]++;
 		_transitionMatrix[ dataset.TrainingSequence[i].first ][ dataset.TrainingSequence[i].second ]++;
+		//if(i % 100 == 99)
+		//	cout << i << endl;
 	}
 
 	//normalize all state frequencies (making them probabilities in ln space)
@@ -782,5 +786,8 @@ void DiscreteHmm::DirectTrain(DiscreteHmmDataset& dataset)
 
 	//normalize all emission frequencies (making them probabilities in ln space)
 	_transitionMatrix.LnNormalizeRows();
+
+	cout << "HMM training completed." << endl;
+	this->PrintModel();
 }
 

@@ -47,15 +47,15 @@ int DiscreteHmmDataset::NumSymbols()
 
 /*
 Builds dataset in memory from a file of training sequences formatted as
-<pos>\t<word>.
+<emission symbol>\t<hidden state symbol>.
 */
 void DiscreteHmmDataset::Build(const string& path)
 {
-	int state, emission;
+	int stateId, symbolId;
 	fstream testFile;
 	string line;
-	string word;
-	string pos;
+	string symbol;
+	string state;
 	int tabIndex, lineNum;
 
 	testFile.open(path.c_str(),ios::in);
@@ -63,24 +63,28 @@ void DiscreteHmmDataset::Build(const string& path)
 		cout << "ERROR could not open dataset file: " << path << endl;
 	}
 
+	cout << "Building dataset..." << endl;
+
 	lineNum = 0;
 	while(getline(testFile,line)){
 		tabIndex = line.find("\t");
 		if(tabIndex > 0){
-			//get the word and pos
-			word = line.substr(tabIndex,line.length() - tabIndex);
-			pos = line.substr(0,tabIndex);
-			//put them in the flyweights
-			state = _stateFlyweight.AddItem(pos);
-			emission = _symbolFlyweight.AddItem(word);
+			//get the symbol and its state label
+			symbol = line.substr(0,tabIndex);
+			state = line.substr(tabIndex+1, line.length()-tabIndex);
+			//cout << "symbol/state: " << symbol << "/" << state << endl;
+			//and put them in the flyweights
+			stateId = _stateFlyweight.AddItem(state);
+			symbolId = _symbolFlyweight.AddItem(symbol);
 			//add state:symbol pair to the training sequence
-			TrainingSequence.push_back(pair<int,int>(state,emission));
+			TrainingSequence.push_back(pair<int,int>(stateId,symbolId));
 		}
 		else{
 			cout << "ERROR tabIndex not found in file: " << path << "  for line #" << lineNum << ": " << line << endl;
 		}
 		lineNum++;
 	}
+	cout << "Dataset build completed. Dataset has num symbols/states: " << this->NumSymbols() << "/" << this->NumStates() << endl;
 }
 
 const string& DiscreteHmmDataset::GetSymbol(const int key)

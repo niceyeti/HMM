@@ -91,6 +91,8 @@ void Matrix<T>::LnNormalizeRows()
 {
 	double norm;
 
+	cout << "Normalizing matrix rows..." << endl;
+
 	for(int i = 0; i < _matrix.size(); i++){
 		norm = 0;
 		for(int j = 0; j < _matrix[0].size(); j++){

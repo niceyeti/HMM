@@ -12,15 +12,29 @@ Flyweight<T>::~Flyweight()
 	Clear();
 }
 
+/*
+Adds an item to the tables, if it does not already exist.
+*/
 template<typename T>
 int Flyweight<T>::AddItem(const T& item)
 {
-	_forwardTable.insert(std::pair<T,int>(item,_numKeys));
-	_reverseTable.resize(_numKeys+1);
-	_reverseTable[_numKeys] = item;
-	_numKeys++;
+	int id = -1;
+	typename map< T,int>::iterator key = _forwardTable.find(item);
 
-	return _numKeys-1;
+	//item doesn't already exist, so add it
+	if(key == _forwardTable.end()){
+		_forwardTable.insert(std::pair<T,int>(item,_numKeys));
+		_reverseTable.resize(_numKeys+1);
+		_reverseTable[_numKeys] = item;
+		id = _numKeys;
+		_numKeys++;
+	}
+	else{
+		//item already exists, so just return its id
+		id = key->second;
+	}
+
+	return id;
 }
 
 

@@ -13,8 +13,10 @@ int main(int argc, char** argv)
 	//Verify the model can be written, and is the same as what was written/read previously above
 	hmm.WriteModel("myHmm2.hmm",false);
 
+	DiscreteHmmDataset dataset;
+	dataset.Build("./data/data_100000_Points.txt");
 
-
+	hmm.DirectTrain(dataset);
 
 	return 0;
 }
