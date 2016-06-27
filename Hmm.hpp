@@ -12,6 +12,8 @@
 #include <fstream>
 #include <cmath>
 #include <limits>
+#include <cstdlib>
+#include <ctime>
 
 //some very large negative number, such that any log-probability (negative numbers) would be larger
 #define MIN_DOUBLE -numeric_limits<double>::max()
