@@ -85,7 +85,7 @@ void Matrix<T>::Print(bool convertLogProbs)
 /*
 Given a matrix representing co-event frequency counts,
 this normalizes rows, turning them into probabilities.
-Working with probabilities in range [0,1] is a very bad idea in floating point land,
+Working with probabilities in range [0,1] is a bad idea in floating point land,
 so this places them in natural logarithm space instead.
 */
 template<typename T>

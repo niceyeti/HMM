@@ -621,24 +621,76 @@ can determine the optimum obtained by the algorithm.
 
 For now, just sets both matrices to uniform distributions of 1/N.
 */
+void DiscreteHmm::_initRandomDistribution()
+{
+	int i, j;
+	double sum;
+
+	//set the pi vector to a uniform distribution
+	for(i = 0, sum = 0.0; i < _pi.size(); i++){
+		_pi[i] = rand() % 100 + 5;
+		sum += _pi[i];
+	}
+	//set the pi vector to a uniform distribution
+	for(i = 0; i < _pi.size(); i++){
+		_pi[i] /= sum;
+		_pi[i] = log(_pi[i]);
+	}
+
+	//set the transition matrix to a uniform distribution
+	for(i = 0; i < _transitionMatrix.NumRows(); i++){
+		for(j = 0, sum = 0.0; j < _transitionMatrix.NumCols(); j++){
+			_transitionMatrix[i][j] = rand() % 100 + 5;
+			sum += _transitionMatrix[i][j];
+		}
+		//normalize
+		for(j = 0; j < _transitionMatrix.NumCols(); j++){
+			_transitionMatrix[i][j] /= sum;
+			_transitionMatrix[i][j] = log(_transitionMatrix[i][j]);
+		}
+	}
+
+	//set the state matrix to a uniform distribution
+	for(i = 0; i < _stateMatrix.NumRows(); i++){
+		for(j = 0, sum = 0.0; j < _stateMatrix.NumCols(); j++){
+			_stateMatrix[i][j] = rand() % 100 + 5;
+			sum += _stateMatrix[i][j];
+		}
+		//normalize
+		for(j = 0; j < _stateMatrix.NumCols(); j++){
+			_stateMatrix[i][j] /= sum;
+			_stateMatrix[i][j] = log(_stateMatrix[i][j]);
+		}
+	}
+}
+
+
+
+
+/*
+A BaumWelch utility, initializes the pi vector, and the state and emission matrices. How these matrices are initialized
+can determine the optimum obtained by the algorithm.
+
+For now, just sets both matrices to uniform distributions of 1/N.
+*/
 void DiscreteHmm::_initUniformDistribution()
 {
 	//set the pi vector to a uniform distribution
 	for(int i = 0; i < _pi.size(); i++){
-		_pi[i] = log(1.0 / (double)_pi.size());
+		_pi[i] = -log(1.0 / (double)_pi.size());
 	}
 
 	//set the transition matrix to a uniform distribution
 	for(int i = 0; i < _transitionMatrix.NumRows(); i++){
 		for(int j = 0; j < _transitionMatrix.NumCols(); j++){
-			_transitionMatrix[i][j] = log(1.0 / (double)_transitionMatrix[i].size());
+			_transitionMatrix[i][j] = -log(1.0 / (double)_transitionMatrix[i].size());
 		}
 	}
 
 	//set the state matrix to a uniform distribution
 	for(int i = 0; i < _stateMatrix.NumRows(); i++){
 		for(int j = 0; j < _stateMatrix.NumCols(); j++){
-			_stateMatrix[i][j] = log(1.0 / (double)_stateMatrix[i].size());
+			_stateMatrix[i][j] = -log(1.0 / (double)_stateMatrix[i].size());
 		}
 	}
 }
@@ -691,8 +743,8 @@ double DiscreteHmm::BaumWelch(DiscreteHmmDataset& dataset, const int numHiddenSt
 	}
 	//gamma matrix is sized NumStates x NumObservations
 	_gammaLattice.Resize(_stateMatrix.NumRows(), observations.size()); 
-	//set the hmm-model to uniform initial values
-	_initUniformDistribution();
+	//set the hmm-model to random initial values
+	_initRandomDistribution();
 
 	cout << "Initial model: " << endl;
 	PrintModel();
@@ -712,13 +764,14 @@ double DiscreteHmm::BaumWelch(DiscreteHmmDataset& dataset, const int numHiddenSt
 		lastProb = pObs_forward;
 		pObs_forward  = ForwardAlgorithm(observations,observations.size()-1);
 		pObs_backward = BackwardAlgorithm(observations,0);
-		delta = lastProb - pObs_forward;
+		delta = pObs_forward - lastProb;
 		i++;
 
 		PrintModel();
-		cout << i << "\tforward p(obs): " << pObs_forward << "/" << exp(-1 * pObs_forward) << "\tbackward p(obs): " << pObs_backward << "/" << exp(-1 * pObs_backward) << "\tdelta: " << exp(-delta) << endl;
-		cout << "Enter anything to continue: " << flush;
-		cin >> dummy;
+		printf("%lf\n",pObs_forward);
+		cout << i << "\tforward p(obs): " << pObs_forward << "/" << exp(-1 * pObs_forward) << "\tbackward p(obs): " << pObs_backward << "/" << exp(-1 * pObs_backward) << "\tdelta: " << delta << endl;
+		//cout << "Enter anything to continue: " << flush;
+		//cin >> dummy;
 	}
 	cout << "BaumWelch completed" << endl;
 	PrintModel();
@@ -773,6 +826,11 @@ void DiscreteHmm::_updateModels(const vector<int>& observations)
 	//update the emission probabilities
 	for(i = 0; i < _transitionMatrix.NumRows(); i++){ // iterate the hidden states
 		for(j = 0; j < _transitionMatrix.NumCols(); j++){ // iterate the symbols
+			//reset the temp vals and vecs
+			gammaObsVals.clear();
+			maxObsGamma = MIN_DOUBLE;
+			maxGamma = MIN_DOUBLE;
+			//iterate the entire observation sequence
 			for(t = 0; t < observations.size(); t++){
 				//only add the gamma value of this time step if the observed matches the kth emission symbol
 				if(observations[t] == j){
@@ -795,11 +853,6 @@ void DiscreteHmm::_updateModels(const vector<int>& observations)
 			else{
 				_transitionMatrix[i][j] = MIN_DOUBLE; //no symbol matches, so set log probability to negative infinity
 			}
-
-			//reset the temp vals and vecs
-			gammaObsVals.clear();
-			maxObsGamma = MIN_DOUBLE;
-			maxGamma = MIN_DOUBLE;
 		}
 	}
 }

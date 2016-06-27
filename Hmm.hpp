@@ -54,6 +54,7 @@ class DiscreteHmm{
 		void WriteModel(const string& path, bool asLogProbs=true);
 	private:
 		void _initUniformDistribution();
+		void _initRandomDistribution();
 		void _updateModels(const vector<int>& observations);
 		void _retrainXiModel(const vector<int>& observations);
 		void _resizeModel(int numStates, int numSymbols);

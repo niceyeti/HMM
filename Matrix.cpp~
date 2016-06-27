@@ -71,10 +71,12 @@ void Matrix<T>::Print(bool convertLogProbs)
 	for(int i = 0; i < _matrix.size(); i++){
 		for(int j = 0; j < _matrix[0].size(); j++){
 			cout << setprecision(3);
-			if(convertLogProbs)
+			if(convertLogProbs){
 				cout << exp(_matrix[i][j]) << " ";
-			else
+			}
+			else{
 				cout << _matrix[i][j] << " ";
+			}
 		}
 		cout << endl;
 	}

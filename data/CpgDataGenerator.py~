@@ -153,7 +153,7 @@ NON_CPG = 0
 curState = random.randint(1,100) % len(hiddenSymbols)
 emissionState = random.randint(1,100) % len(emissionSymbols)
 output = ""
-numDataPoints = 1000000
+numDataPoints = 100000
 
 
 
