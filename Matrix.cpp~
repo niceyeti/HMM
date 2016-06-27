@@ -71,7 +71,7 @@ void Matrix<T>::Print(bool convertLogProbs)
 	for(int i = 0; i < _matrix.size(); i++){
 		for(int j = 0; j < _matrix[0].size(); j++){
 			cout << setprecision(3);
-			if(convertLogProbs && _matrix[i][j] <= 0)
+			if(convertLogProbs)
 				cout << exp(_matrix[i][j]) << " ";
 			else
 				cout << _matrix[i][j] << " ";
@@ -90,6 +90,8 @@ template<typename T>
 void Matrix<T>::LnNormalizeRows()
 {
 	double norm;
+
+	cout << "Normalizing matrix rows..." << endl;
 
 	for(int i = 0; i < _matrix.size(); i++){
 		norm = 0;

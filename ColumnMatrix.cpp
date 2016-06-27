@@ -102,10 +102,12 @@ this will not shrink the internal matrix size, only its representation.
 template<typename T>
 void ColumnMatrix<T>::Resize(const int rows, const int cols)
 {
+	//first check column size is sufficient
 	if(_matrix.size() < cols){
 		_matrix.resize(cols);
 		_matrix.shrink_to_fit();
 	}
+	//check row size is sufficient
 	if(_matrix[0].size() < rows){
 		for(int i = 0; i < _matrix.size(); i++){
 			_matrix[i].resize(rows);
