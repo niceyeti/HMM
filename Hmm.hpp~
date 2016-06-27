@@ -52,12 +52,12 @@ class DiscreteHmm{
 		void Clear();
 		void PrintModel(bool asLogProbs=false);
 		void WriteModel(const string& path, bool asLogProbs=true);
-		void TestLogSumExp();
 	private:
 		void _initUniformDistribution();
 		void _updateModels(const vector<int>& observations);
 		void _retrainXiModel(const vector<int>& observations);
 		void _resizeModel(int numStates, int numSymbols);
+		void _testLogSumExp();
 
 		DiscreteHmmDataset _dataset;
 		ColumnMatrix<double> _alphaLattice;
@@ -69,7 +69,7 @@ class DiscreteHmm{
 		//transition matrix semantics: rows = states, cols = emissions
 		Matrix<double> _transitionMatrix;
 
-		Matrix<double> _gammaMatrix;
+		ColumnMatrix<double> _gammaMatrix;
 		vector<Matrix<double> >	_xiMatrices;
 		void _split(const string& str, const char delim, vector<string>& tokens);
 		double _logSumExp(const vector<double>& vec, double b);

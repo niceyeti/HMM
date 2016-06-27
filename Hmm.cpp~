@@ -204,7 +204,7 @@ void DiscreteHmm::Clear()
 	_stateMatrix.Clear();
 	_transitionMatrix.Clear();
 	_pi.clear();
-	_gammaMatrix.Clear();
+	_gammaLattice.Clear();
 	_xiMatrices.clear();
 }
 
@@ -361,7 +361,7 @@ double DiscreteHmm::BackwardAlgorithm(const vector<int>& observations, const int
 {
 	int i, j, k;
 	vector<double> temp;
-	double b;
+	double b, pObs;
 
 	if(t < 0 || t >= observations.size()){
 		cout << "ERROR invalid t value in BackwardAlgorithm()" << t << endl;
@@ -407,7 +407,10 @@ double DiscreteHmm::BackwardAlgorithm(const vector<int>& observations, const int
 		}
 	}
 
-	return _logSumExp(firstCol,b);
+	pObs = _logSumExp(firstCol,b);
+	cout << "Backward algorithm completed. P(observation): " << pObs << endl;
+
+	return pObs;
 }
 
 /*
@@ -489,14 +492,14 @@ double DiscreteHmm::ForwardAlgorithm(const vector<int>& observations, const int 
 {
 	int i, j, k;
 	vector<double> temp;
-	double b;
+	double b, pObs;
 
 	if(t < 1 || t >= observations.size()){
 		cout << "ERROR insufficient t value in ForwardAlgorithm() t=" << t << endl;
 		return 1;
 	}
 
-	//Resize and reset matrix to all zeroes
+	//Resize matrix to all zeroes
 	_alphaLattice.Resize(_stateMatrix.NumRows(), observations.size());
 	temp.resize(_stateMatrix.NumRows());
 
@@ -535,7 +538,10 @@ double DiscreteHmm::ForwardAlgorithm(const vector<int>& observations, const int 
 		}
 	}
 
-	return _logSumExp(lastCol,b);
+	pObs = _logSumExp(lastCol,b);
+	cout << "Forward algorithm completed. P(observation): " << pObs << endl;
+
+	return pObs;
 }
 
 /*
@@ -690,8 +696,8 @@ double DiscreteHmm::BaumWelch(DiscreteHmmDataset& dataset, const int numHiddenSt
 		//resize every matrix in the xi matrices to be a square matrix by the number of hidden states
 		_xiMatrices[i].Resize(_stateMatrix.NumRows(), _stateMatrix.NumCols()); 
 	}
-	//gamma matrix is also just a square matrix, the same size as the state matrix
-	_gammaMatrix.Resize(_stateMatrix.NumRows(), _stateMatrix.NumCols()); 
+	//gamma matrix is sized NumStates x NumObservations
+	_gammaLattice.Resize(_stateMatrix.NumRows(), observations.size()); 
 	//set the hmm-model to uniform initial values
 	_initUniformDistribution();
 
@@ -714,6 +720,7 @@ double DiscreteHmm::BaumWelch(DiscreteHmmDataset& dataset, const int numHiddenSt
 		cout << i << "\tp(obs): " << obsProb << "\tdelta: " << delta << endl;
 		cout << "Enter anything to cintunue: " << flush;
 		cin >> dummy;
+		PrintModel();
 	}
 	cout << "BaumWelch completed" << endl;
 	PrintModel();
@@ -735,11 +742,12 @@ void DiscreteHmm::_updateModels(const vector<int>& observations)
 	//init the temp storage vectors for summing log probabilities
 	xiVals.resize(observations.size());
 	gammaVals.resize(observations.size());
-	//gammaObsVals.resize(observations.size());
 
+	//cout << "_updateModels()" << endl;
+ 
 	//update the Pi values: these are just the first column of the gamma values
-	for(i = 0; i < _gammaMatrix.NumRows(); i++){
-		_pi[i] = _gammaMatrix[i][0];
+	for(i = 0; i < _gammaLattice.NumRows(); i++){
+		_pi[i] = _gammaLattice[i][0];
 	}
 
 	//update the A (state transition prob) values
@@ -752,7 +760,7 @@ void DiscreteHmm::_updateModels(const vector<int>& observations)
 				if(xiVals[t] > maxXi){
 					maxXi = xiVals[t];
 				}
-				gammaVals[t] = _gammaMatrix[t][i];
+				gammaVals[t] = _gammaLattice[t][i];
 				if(gammaVals[t] > maxGamma){
 					maxGamma = gammaVals[t];
 				}
@@ -763,22 +771,26 @@ void DiscreteHmm::_updateModels(const vector<int>& observations)
 	}
 
 	//update the emission probabilities
-	for(i = 0; i < _transitionMatrix.NumRows(); i++){
-		for(j = 0; j < _transitionMatrix.NumCols(); j++){
+	for(i = 0; i < _transitionMatrix.NumRows(); i++){ // rows=hidden states
+		for(j = 0; j < _transitionMatrix.NumCols(); j++){ // cols=symbols
+			gammaObsVals.clear();
+			maxObsGamma = MIN_DOUBLE;
+			maxGamma = MIN_DOUBLE;
 			for(t = 0; t < observations.size(); t++){
 				//only add the gamma value of this time step if the observed matches the kth emission symbol
 				if(observations[t] == j){
-					gammaObsVals.push_back(_gammaMatrix[t][i]);
-					if(gammaObsVals.back() > maxObsGamma){
-						maxObsGamma = gammaObsVals.back();
+					gammaObsVals.push_back(_gammaLattice[t][i]);
+					if(_gammaLattice[t][i] > maxObsGamma){
+						maxObsGamma = _gammaLattice[t][i];
 					}
 				}
 				//running total (denominator)
-				gammaVals[t] = _gammaMatrix[t][i];
+				gammaVals[t] = _gammaLattice[t][i];
 				if(gammaVals[t] > maxGamma){
 					maxGamma = gammaVals[t];
 				}
 			}
+
 			//divide the values calculated from above
 			if(gammaObsVals.size() > 0){
 				_transitionMatrix[i][j] = _logSumExp(gammaObsVals,maxObsGamma) - _logSumExp(gammaVals, maxGamma);
@@ -802,18 +814,20 @@ void DiscreteHmm::_retrainXiModel(const vector<int>& observations)
 	//TODO init sizes of XiMatrix per observations size
 	normVec.resize(_stateMatrix.NumRows() * _stateMatrix.NumCols());
 
-	for(t = 0; t < _xiMatrices.size(); t++){
-		Matrix<double>& XiMatrix = _xiMatrices[t];
+	_alphaLattice.NumRows();
 
+	for(t = 0; t < observations.size() - 1; t++){
+		Matrix<double>& xiMatrix = _xiMatrices[t];
+		//cout << "top1... " << t << "/" << _xiMatrices.size() << "/" << observations.size() << endl;
 		//set the Xi matrix values
 		b = MIN_DOUBLE;
 		for(i = 0; i < _stateMatrix.NumRows(); i++){
 			for(j = 0; j < _stateMatrix.NumRows(); j++){
-				XiMatrix[i][j] = _alphaLattice[t][i] + _stateMatrix[i][j] + _transitionMatrix[j][ observations[t+1] ] + _betaLattice[t+1][j];
-				//sum log-probs???
-				normVec[i * _stateMatrix.NumRows() + j] = XiMatrix[i][j];
-				if(XiMatrix[i][j] > b){
-					b = XiMatrix[i][j];
+				xiMatrix[i][j] = _alphaLattice[t][i] + _stateMatrix[i][j] + _transitionMatrix[j][ observations[t+1] ] + _betaLattice[t+1][j];
+				//sum log-probs
+				normVec[i * _stateMatrix.NumRows() + j] = xiMatrix[i][j];
+				if(xiMatrix[i][j] > b){
+					b = xiMatrix[i][j];
 				}
 			}
 		}
@@ -822,21 +836,20 @@ void DiscreteHmm::_retrainXiModel(const vector<int>& observations)
 		obsProb = _logSumExp(normVec, b);
 		//normalize all the probs for this state after initializing them
 		for(i = 0; i < _stateMatrix.NumRows(); i++){
-			for(j = 0; j < _stateMatrix.NumRows(); j++){
-				XiMatrix[i][j] -= obsProb;
+			for(j = 0; j < _stateMatrix.NumCols(); j++){
+				xiMatrix[i][j] -= obsProb;
 			}
 		}
 
 		//set the gamma values for each state (See Rabiner; for a given state i, its gamma value is the sum over all states j)
-		for(i = 0; i < _stateMatrix.NumRows(); i++){
-			_gammaMatrix[t][i] = 0;
-			for(j = 0; j < _stateMatrix.NumRows(); j++){
-				_gammaMatrix[t][i] += XiMatrix[i][j];
+		for(i = 0; i < xiMatrix.NumRows(); i++){
+			//cout << "summing.." << endl;
+			for(j = 0, _gammaLattice[t][i] = 0; j < xiMatrix.NumCols(); j++){
+				_gammaLattice[t][i] += xiMatrix[i][j];
 			}
 		}
 	}
 }
-
 
 /*
 Normal initialization training: read a bunch of data containing both labelled emissions

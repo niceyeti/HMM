@@ -69,7 +69,7 @@ class DiscreteHmm{
 		//transition matrix semantics: rows = states, cols = emissions
 		Matrix<double> _transitionMatrix;
 
-		Matrix<double> _gammaMatrix;
+		ColumnMatrix<double> _gammaLattice;
 		vector<Matrix<double> >	_xiMatrices;
 		void _split(const string& str, const char delim, vector<string>& tokens);
 		double _logSumExp(const vector<double>& vec, double b);
